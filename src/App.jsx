@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "./App.css";
+import Navbar from "./components/navbar/Navbar";
 import { sampleCourts, samplePlayers } from "./data/sampleData";
 
 const STORAGE_KEY = "badminton-central-loop-v1";
@@ -817,9 +818,6 @@ function App() {
     return (
       <>
         {renderTeam(match.teamOne)}
-
-        <div className="versus-label">VS</div>
-
         {renderTeam(match.teamTwo)}
       </>
     );
@@ -842,10 +840,8 @@ function App() {
   return (
     <main className="app-shell">
       <header className="top-bar">
-        <span className="menu-icon" aria-hidden="true">
-          ☰
-        </span>
-
+        <Navbar />
+        
         <div className="top-actions">
           <button
             type="button"
@@ -917,11 +913,11 @@ function App() {
                 <div className="court-footer">
                   {activeMatch ? (
                     <>
-                      <div className="court-timer">
-                        {formatSeconds(elapsedSeconds)}
-                      </div>
-
                       <div className="court-action-row">
+                        <div className="court-timer">
+                          {formatSeconds(elapsedSeconds)}
+                        </div>
+
                         <button
                           type="button"
                           className="danger-button"
@@ -1035,8 +1031,11 @@ function App() {
                   {renderMatch(match)}
 
                   <div className="queue-controls">
+
+                    <div className="queue-control-buttons">
                     <button
                       type="button"
+                      className="move-up-button"
                       onClick={() =>
                         moveQueuedMatch(match.id, -1)
                       }
@@ -1047,6 +1046,7 @@ function App() {
 
                     <button
                       type="button"
+                      className="move-down-button"
                       onClick={() =>
                         moveQueuedMatch(match.id, 1)
                       }
@@ -1056,15 +1056,16 @@ function App() {
                     >
                       Move Down
                     </button>
+                    </div>
 
                     <button
                       type="button"
-                      className="secondary-button"
+                      className="rebuild-button"
                       onClick={() =>
                         rebuildQueuedMatch(match.id)
                       }
                     >
-                      Rebuild Pairing
+                      Rebuild
                     </button>
                   </div>
 

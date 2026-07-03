@@ -1,17 +1,17 @@
 :root {
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  font-family: 'Arial', sans-serif;
+  --black: #1c1c1c;
+  --white: #e4e4e4;
+  --green: #187c15;
+  --muted: #ccc;
+  --highlight: #f1f0ac;
 
-  color: #1f2933;
-  background: #f4f5f7;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  --button1: #176b33;
+  --button2: #f3f3f3;
+
+  --text-size: clamp(12px, 1vw, 16px);
+  --header-size: clamp(16px, 2vw, 36px);
+  --note-size: 12px;
 }
 
 * {
@@ -28,19 +28,22 @@ body,
 }
 
 body {
-  min-width: 320px;
+  margin: 0;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--white);
 }
 
 button {
-  min-height: 38px;
-  padding: 0.6rem 0.85rem;
+  text-align: center;
+  height: 2rem;
+  padding: 0.4rem 1rem;
   border: 0;
-  border-radius: 8px;
+  border-radius: 24px;
   background: #176b33;
   color: white;
-  font: inherit;
-  font-weight: 700;
   cursor: pointer;
 }
 
@@ -62,32 +65,42 @@ button:disabled {
   background: #e5484d;
 }
 
+.menuBtn {
+  color: var(--black);
+  top: 20px;
+  left: 20px;
+  font-size: clamp(18px, 2.5vw, 24px);
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.menuBtn:hover {
+  color: #4f4f4f;
+  transform: scale(1.1);
+}
+
 .app-shell {
   min-height: 100vh;
-  background: #f4f5f7;
+  background: var(--white);
 }
 
 .top-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.85rem 1.25rem;
+  padding: 1.25rem;
   background: white;
-}
-
-.menu-icon {
-  font-size: 1.8rem;
-  font-weight: 900;
 }
 
 .top-actions {
   display: flex;
-  gap: 0.65rem;
+  gap: 1rem;
 }
 
 .courts-section {
-  padding: 0.75rem 1.25rem 1.25rem;
+  padding: 0rem 1.25rem 1.25rem 1.25rem;
   background: white;
 }
 
@@ -106,7 +119,7 @@ button:disabled {
 .court-card h2 {
   margin: 0 0 0.55rem;
   text-align: center;
-  font-size: 1rem;
+  font-size: var(--note-size);
 }
 
 .court-content {
@@ -115,22 +128,22 @@ button:disabled {
 
 .team-box {
   padding: 0.45rem;
-  border: 2px dashed #d0d5dd;
+  border: 2px dashed var(--muted);
   border-radius: 10px;
+  margin-bottom: 0.5rem;
 }
 
 .player-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  min-height: 64px;
-  padding: 0.7rem;
+  min-height: 1rem;
+  padding: 0.5rem;
   border-radius: 7px;
-  background: #e5e7eb;
+  background: var(--button2);
 }
 
-.player-row + .player-row {
+.player-row+.player-row {
   margin-top: 0.4rem;
 }
 
@@ -151,14 +164,14 @@ button:disabled {
 .player-stats {
   flex: 0 0 auto;
   align-items: flex-end;
-  font-size: 0.76rem;
+  font-size: var(--note-size);
 }
 
 .skill-badge {
   width: fit-content;
-  padding: 0.12rem 0.45rem;
+  padding: 0.12rem 1rem;
   border-radius: 999px;
-  font-size: 0.68rem;
+  font-size: var(--note-size);
 }
 
 .skill-badge.beginner {
@@ -184,8 +197,7 @@ button:disabled {
 .versus-label {
   margin: 0.6rem 0;
   text-align: center;
-  font-size: 0.78rem;
-  font-weight: 900;
+  font-size: var(--text-size);
 }
 
 .empty-court {
@@ -206,16 +218,20 @@ button:disabled {
 }
 
 .court-timer {
-  margin-bottom: 0.5rem;
-  text-align: center;
-  font-size: 1.1rem;
-  font-weight: 900;
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-size);
+  font-variant-numeric: tabular-nums;
 }
 
 .court-action-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
+}
+
+.court-action-row button {
+  flex: 2;
 }
 
 .court-start-button {
@@ -228,13 +244,13 @@ button:disabled {
 .queue-section {
   min-height: 42vh;
   padding: 1.75rem 1.25rem;
-  background: #2da346;
+  background: var(--green);
   color: white;
 }
 
 .queue-heading {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1rem;
@@ -242,11 +258,14 @@ button:disabled {
 
 .queue-heading h2 {
   margin: 0;
-  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-size: var(--header-size);
   line-height: 1;
 }
 
 .queue-heading p {
+  font-size: var(--note-size);
+  color: var(--muted);
+  letter-spacing: 0.1px;
   margin: 0.6rem 0 0;
 }
 
@@ -255,7 +274,8 @@ button:disabled {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.85rem 1.2rem;
-  font-size: 0.82rem;
+  font-size: var(--note-size);
+  letter-spacing: 0.1px;
 }
 
 .queue-summary span {
@@ -275,19 +295,59 @@ button:disabled {
 .queue-card {
   min-width: 0;
   padding: 0.65rem;
-  border: 2px dashed rgba(255, 255, 255, 0.72);
+  border: none;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.08);
 }
 
 .next-match-card {
+  border: 2px dashed var(--green);
   border-style: solid;
-  border-width: 3px;
-  background: rgba(255, 255, 255, 0.16);
+  background-color: rgba(255, 255, 255, 0.529);
+  color: var(--black);
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12);
 }
 
+.next-match-card .queue-card-header {
+  color: var(--black);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.next-match-card .queue-card-header span {
+  font-size: var(--note-size);
+  color: var(--black);
+}
+
+.next-match-card .team-box {
+  border-color: var(--black);
+}
+
+.next-match-card .direct-court-actions {
+  border-top-color: #e5e7eb;
+}
+
+.next-match-card .move-up-button {
+  background: var(--green);
+  color: white;
+}
+
+.next-match-card .move-down-button {
+  background: transparent;
+  border: 2px solid var(--green);
+  color: var(--green);
+}
+
+.next-match-card .rebuild-button {
+  border-color: var(--highlight);
+  color: #634b4d;
+}
+
 .queue-card-header {
+  color: var(--white);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -297,14 +357,14 @@ button:disabled {
 
 .queue-card-header span {
   overflow: hidden;
-  color: rgba(255, 255, 255, 0.76);
-  font-size: 0.72rem;
+  color: var(--white);
+  font-size: var(--note-size);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.queue-card .team-box {
-  border-color: rgba(255, 255, 255, 0.55);
+.queue-card .team-box:not(:next-match-card) {
+  border-color: rgba(255, 255, 255, 0.21);
 }
 
 .queue-card .player-row {
@@ -312,19 +372,45 @@ button:disabled {
   color: #111827;
 }
 
-.queue-controls,
-.direct-court-actions {
+.move-up-button {
+  background: var(--button2);
+  color: #1f2933;
+}
+
+.move-down-button {
+  background: transparent;
+  border: 2px solid var(--button2);
+  color: var(--button2);
+}
+
+.move-up-button:hover,
+.move-down-button:hover {
+  transform: scale(1.05);
+}
+
+.rebuild-button {
+  background: var(--highlight);
+  border: 2px solid var(--highlight);
+  color: #634b4d;
+}
+
+.queue-controls{
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
   margin-top: 0.65rem;
 }
 
-.queue-controls button,
-.direct-court-actions button {
-  min-height: 32px;
-  padding: 0.4rem 0.55rem;
-  font-size: 0.72rem;
+.queue-control-buttons {
+  display: flex;
+  gap: 0.4rem;
+  flex: 1;
+}
+.direct-court-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
 }
 
 .direct-court-actions {
@@ -333,7 +419,7 @@ button:disabled {
 }
 
 .direct-court-actions span {
-  font-size: 0.75rem;
+  font-size: var(--note-size);
 }
 
 .empty-queue {
@@ -353,6 +439,7 @@ button:disabled {
 }
 
 @media (max-width: 1150px) {
+
   .court-grid,
   .queue-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -360,6 +447,7 @@ button:disabled {
 }
 
 @media (max-width: 700px) {
+
   .top-bar,
   .queue-heading {
     align-items: flex-start;
