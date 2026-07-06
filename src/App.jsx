@@ -821,6 +821,9 @@ function App() {
     return (
       <>
         {renderTeam(match.teamOne)}
+        <div className="vs-divider">
+          <span>vs</span>
+        </div>
         {renderTeam(match.teamTwo)}
       </>
     );
@@ -885,8 +888,8 @@ function App() {
             return (
               <article
                 className={`court-card ${
-                  isDropTarget ? "court-drop-target" : ""
-                }`}
+                  activeMatch ? "court-active" : ""
+                } ${isDropTarget ? "court-drop-target" : ""}`}
                 key={court.id}
                 onDragOver={(event) => handleCourtDragOver(event, court)}
                 onDragLeave={() => handleCourtDragLeave(court)}
