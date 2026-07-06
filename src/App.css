@@ -394,7 +394,7 @@ button:disabled {
   color: #634b4d;
 }
 
-.queue-controls{
+.queue-controls {
   display: flex;
   flex-wrap: wrap;
   margin-top: 0.65rem;
@@ -405,6 +405,7 @@ button:disabled {
   gap: 0.4rem;
   flex: 1;
 }
+
 .direct-court-actions {
   display: flex;
   flex-wrap: wrap;
@@ -420,6 +421,50 @@ button:disabled {
 
 .direct-court-actions span {
   font-size: var(--note-size);
+}
+
+.drag-handle {
+  display: inline-block;
+  margin-right: 0.15rem;
+  cursor: grab;
+  opacity: 0.7;
+}
+
+.queue-card {
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease,
+    outline-color 0.15s ease;
+}
+
+.queue-card:active {
+  cursor: grabbing;
+}
+
+.queue-card-dragging {
+  opacity: 0.35;
+}
+
+.queue-card-drag-over {
+  outline: 2px dashed white;
+  outline-offset: 2px;
+  transform: translateY(-2px);
+}
+
+.court-card {
+  border-radius: 12px;
+  transition: outline-color 0.15s ease, background-color 0.15s ease;
+  outline: 2px dashed transparent;
+  outline-offset: 3px;
+}
+
+.court-drop-target {
+  outline-color: var(--green);
+  background-color: rgba(24, 124, 21, 0.06);
+}
+
+.court-drop-target .empty-court {
+  border-color: var(--green);
+  color: var(--green);
 }
 
 .empty-queue {

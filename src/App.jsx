@@ -28,11 +28,7 @@ function createPlayerMap(players) {
   return new Map(players.map((player) => [player.id, player]));
 }
 
-function countPreviousPartnerships(
-  playerOneId,
-  playerTwoId,
-  completedMatches
-) {
+function countPreviousPartnerships(playerOneId, playerTwoId, completedMatches) {
   return completedMatches.filter((match) => {
     const partneredOnTeamOne =
       match.teamOne.includes(playerOneId) &&
@@ -46,12 +42,7 @@ function countPreviousPartnerships(
   }).length;
 }
 
-function calculatePairingScore(
-  teamOne,
-  teamTwo,
-  players,
-  completedMatches
-) {
+function calculatePairingScore(teamOne, teamTwo, players, completedMatches) {
   const playerMap = createPlayerMap(players);
 
   const teamOneSkill = teamOne.reduce((total, playerId) => {
@@ -67,16 +58,8 @@ function calculatePairingScore(
   const skillDifference = Math.abs(teamOneSkill - teamTwoSkill);
 
   const repeatedPartnerCount =
-    countPreviousPartnerships(
-      teamOne[0],
-      teamOne[1],
-      completedMatches
-    ) +
-    countPreviousPartnerships(
-      teamTwo[0],
-      teamTwo[1],
-      completedMatches
-    );
+    countPreviousPartnerships(teamOne[0], teamOne[1], completedMatches) +
+    countPreviousPartnerships(teamTwo[0], teamTwo[1], completedMatches);
 
   /*
    * A large penalty is given to unequal team skill.
@@ -86,11 +69,7 @@ function calculatePairingScore(
   return skillDifference * 100 + repeatedPartnerCount * 10;
 }
 
-function createBalancedMatch(
-  selectedPlayerIds,
-  players,
-  completedMatches
-) {
+function createBalancedMatch(selectedPlayerIds, players, completedMatches) {
   const [playerA, playerB, playerC, playerD] = selectedPlayerIds;
 
   // Four players have three possible doubles team arrangements.
@@ -115,20 +94,20 @@ function createBalancedMatch(
         currentBestPairing.teamOne,
         currentBestPairing.teamTwo,
         players,
-        completedMatches
+        completedMatches,
       );
 
       const optionScore = calculatePairingScore(
         pairingOption.teamOne,
         pairingOption.teamTwo,
         players,
-        completedMatches
+        completedMatches,
       );
 
       return optionScore < currentBestScore
         ? pairingOption
         : currentBestPairing;
-    }
+    },
   );
 
   return {
@@ -151,13 +130,8 @@ function sortWaitingPlayers(waitingPlayerIds, players) {
     }
 
     // Primary priority: players with the least total playing time.
-    if (
-      firstPlayer.totalTimePlayed !== secondPlayer.totalTimePlayed
-    ) {
-      return (
-        firstPlayer.totalTimePlayed -
-        secondPlayer.totalTimePlayed
-      );
+    if (firstPlayer.totalTimePlayed !== secondPlayer.totalTimePlayed) {
+      return firstPlayer.totalTimePlayed - secondPlayer.totalTimePlayed;
     }
 
     // Secondary priority: players with fewer completed games.
@@ -172,9 +146,7 @@ function sortWaitingPlayers(waitingPlayerIds, players) {
 
 function fillPreparedMatchQueue(currentState) {
   const updatedQueue = [...currentState.matchQueue];
-  let updatedWaitingPlayerIds = [
-    ...currentState.waitingPlayerIds,
-  ];
+  let updatedWaitingPlayerIds = [...currentState.waitingPlayerIds];
 
   /*
    * Keep preparing matches until:
@@ -187,20 +159,19 @@ function fillPreparedMatchQueue(currentState) {
   ) {
     const orderedWaitingPlayers = sortWaitingPlayers(
       updatedWaitingPlayerIds,
-      currentState.players
+      currentState.players,
     );
 
     const selectedPlayerIds = orderedWaitingPlayers.slice(0, 4);
 
-    updatedWaitingPlayerIds =
-      updatedWaitingPlayerIds.filter(
-        (playerId) => !selectedPlayerIds.includes(playerId)
-      );
+    updatedWaitingPlayerIds = updatedWaitingPlayerIds.filter(
+      (playerId) => !selectedPlayerIds.includes(playerId),
+    );
 
     const preparedMatch = createBalancedMatch(
       selectedPlayerIds,
       currentState.players,
-      currentState.completedMatches
+      currentState.completedMatches,
     );
 
     updatedQueue.push(preparedMatch);
@@ -216,31 +187,25 @@ function fillPreparedMatchQueue(currentState) {
 function createInitialState() {
   const currentTime = Date.now();
 
-  const playersWithWaitingTimes = samplePlayers.map(
-    (player, index) => ({
-      ...player,
-      status: "queued",
+  const playersWithWaitingTimes = samplePlayers.map((player, index) => ({
+    ...player,
+    status: "queued",
 
-      /*
-       * Earlier players receive an older waiting time so the
-       * initial ordering is predictable.
-       */
-      waitingSince:
-        currentTime - (samplePlayers.length - index) * 1000,
-    })
-  );
+    /*
+     * Earlier players receive an older waiting time so the
+     * initial ordering is predictable.
+     */
+    waitingSince: currentTime - (samplePlayers.length - index) * 1000,
+  }));
 
   const initialState = {
     players: playersWithWaitingTimes,
     courts: sampleCourts,
-    waitingPlayerIds: playersWithWaitingTimes.map(
-      (player) => player.id
-    ),
+    waitingPlayerIds: playersWithWaitingTimes.map((player) => player.id),
     matchQueue: [],
     activeMatches: [],
     completedMatches: [],
-    statusMessage:
-      "The first four matches have been prepared.",
+    statusMessage: "The first four matches have been prepared.",
   };
 
   return fillPreparedMatchQueue(initialState);
@@ -254,21 +219,23 @@ function loadInitialState() {
       return JSON.parse(savedState);
     }
   } catch (error) {
-    console.error(
-      "Could not load the saved badminton state.",
-      error
-    );
+    console.error("Could not load the saved badminton state.", error);
   }
 
   return createInitialState();
 }
 
 function App() {
-  const [systemState, setSystemState] =
-    useState(loadInitialState);
+  const [systemState, setSystemState] = useState(loadInitialState);
 
   // This causes active court timers to update every second.
   const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Drag-and-drop state: which queued match is being dragged,
+  // and where it is currently hovering.
+  const [draggedMatchId, setDraggedMatchId] = useState(null);
+  const [dragOverQueueIndex, setDragOverQueueIndex] = useState(null);
+  const [dragOverCourtId, setDragOverCourtId] = useState(null);
 
   const {
     players,
@@ -291,29 +258,21 @@ function App() {
   // Save the entire local prototype whenever its state changes.
   useEffect(() => {
     try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(systemState)
-      );
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(systemState));
     } catch (error) {
-      console.error(
-        "Could not save the badminton state.",
-        error
-      );
+      console.error("Could not save the badminton state.", error);
     }
   }, [systemState]);
 
   function formatSeconds(totalSeconds) {
     const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor(
-      (totalSeconds % 3600) / 60
-    );
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
 
     if (hours > 0) {
       return `${hours}:${String(minutes).padStart(
         2,
-        "0"
+        "0",
       )}:${String(seconds).padStart(2, "0")}`;
     }
 
@@ -324,11 +283,7 @@ function App() {
     return players.find((player) => player.id === playerId);
   }
 
-  function validateMatchStart(
-    currentState,
-    selectedCourt,
-    selectedMatch
-  ) {
+  function validateMatchStart(currentState, selectedCourt, selectedMatch) {
     if (!selectedCourt) {
       return "The selected court does not exist.";
     }
@@ -341,19 +296,16 @@ function App() {
       return "The selected queued match does not exist.";
     }
 
-    const selectedPlayerIds =
-      getMatchPlayerIds(selectedMatch);
+    const selectedPlayerIds = getMatchPlayerIds(selectedMatch);
 
     const playerMap = createPlayerMap(currentState.players);
 
     const activePlayerIds = new Set(
-      currentState.activeMatches.flatMap(
-        getMatchPlayerIds
-      )
+      currentState.activeMatches.flatMap(getMatchPlayerIds),
     );
 
-    const allPlayersExist = selectedPlayerIds.every(
-      (playerId) => playerMap.has(playerId)
+    const allPlayersExist = selectedPlayerIds.every((playerId) =>
+      playerMap.has(playerId),
     );
 
     if (!allPlayersExist) {
@@ -361,16 +313,15 @@ function App() {
     }
 
     const allPlayersAreQueued = selectedPlayerIds.every(
-      (playerId) =>
-        playerMap.get(playerId)?.status === "queued"
+      (playerId) => playerMap.get(playerId)?.status === "queued",
     );
 
     if (!allPlayersAreQueued) {
       return "One or more players are not currently queued.";
     }
 
-    const playerAlreadyInGame = selectedPlayerIds.some(
-      (playerId) => activePlayerIds.has(playerId)
+    const playerAlreadyInGame = selectedPlayerIds.some((playerId) =>
+      activePlayerIds.has(playerId),
     );
 
     if (playerAlreadyInGame) {
@@ -380,13 +331,10 @@ function App() {
     return null;
   }
 
-  function startMatchOnCourt(
-    courtId,
-    requestedMatchId = null
-  ) {
+  function startMatchOnCourt(courtId, requestedMatchId = null) {
     setSystemState((currentState) => {
       const selectedCourt = currentState.courts.find(
-        (court) => court.id === courtId
+        (court) => court.id === courtId,
       );
 
       /*
@@ -394,18 +342,16 @@ function App() {
        * is used.
        */
       const selectedMatchId =
-        requestedMatchId ??
-        currentState.matchQueue[0]?.id;
+        requestedMatchId ?? currentState.matchQueue[0]?.id;
 
-      const selectedMatch =
-        currentState.matchQueue.find(
-          (match) => match.id === selectedMatchId
-        );
+      const selectedMatch = currentState.matchQueue.find(
+        (match) => match.id === selectedMatchId,
+      );
 
       const validationMessage = validateMatchStart(
         currentState,
         selectedCourt,
-        selectedMatch
+        selectedMatch,
       );
 
       if (validationMessage) {
@@ -416,8 +362,7 @@ function App() {
       }
 
       const startedAt = Date.now();
-      const selectedPlayerIds =
-        getMatchPlayerIds(selectedMatch);
+      const selectedPlayerIds = getMatchPlayerIds(selectedMatch);
 
       const stateAfterStarting = {
         ...currentState,
@@ -429,7 +374,7 @@ function App() {
                 status: "occupied",
                 currentMatchId: selectedMatch.id,
               }
-            : court
+            : court,
         ),
 
         players: currentState.players.map((player) =>
@@ -438,11 +383,11 @@ function App() {
                 ...player,
                 status: "inGame",
               }
-            : player
+            : player,
         ),
 
         matchQueue: currentState.matchQueue.filter(
-          (match) => match.id !== selectedMatch.id
+          (match) => match.id !== selectedMatch.id,
         ),
 
         activeMatches: [
@@ -468,20 +413,17 @@ function App() {
   function endMatchOnCourt(courtId) {
     setSystemState((currentState) => {
       const selectedCourt = currentState.courts.find(
-        (court) => court.id === courtId
+        (court) => court.id === courtId,
       );
 
-      const activeMatch =
-        currentState.activeMatches.find(
-          (match) =>
-            match.id === selectedCourt?.currentMatchId
-        );
+      const activeMatch = currentState.activeMatches.find(
+        (match) => match.id === selectedCourt?.currentMatchId,
+      );
 
       if (!selectedCourt || !activeMatch) {
         return {
           ...currentState,
-          statusMessage:
-            "No active match was found on that court.",
+          statusMessage: "No active match was found on that court.",
         };
       }
 
@@ -489,13 +431,10 @@ function App() {
 
       const matchDuration = Math.max(
         1,
-        Math.floor(
-          (endedAt - activeMatch.startedAt) / 1000
-        )
+        Math.floor((endedAt - activeMatch.startedAt) / 1000),
       );
 
-      const matchPlayerIds =
-        getMatchPlayerIds(activeMatch);
+      const matchPlayerIds = getMatchPlayerIds(activeMatch);
 
       const completedMatch = {
         id: createId("completed"),
@@ -517,11 +456,10 @@ function App() {
                 ...player,
                 status: "queued",
                 gamesPlayed: player.gamesPlayed + 1,
-                totalTimePlayed:
-                  player.totalTimePlayed + matchDuration,
+                totalTimePlayed: player.totalTimePlayed + matchDuration,
                 waitingSince: endedAt,
               }
-            : player
+            : player,
         ),
 
         courts: currentState.courts.map((court) =>
@@ -531,7 +469,7 @@ function App() {
                 status: "available",
                 currentMatchId: null,
               }
-            : court
+            : court,
         ),
 
         /*
@@ -541,22 +479,15 @@ function App() {
         waitingPlayerIds: [
           ...currentState.waitingPlayerIds,
           ...matchPlayerIds.filter(
-            (playerId) =>
-              !currentState.waitingPlayerIds.includes(
-                playerId
-              )
+            (playerId) => !currentState.waitingPlayerIds.includes(playerId),
           ),
         ],
 
-        activeMatches:
-          currentState.activeMatches.filter(
-            (match) => match.id !== activeMatch.id
-          ),
+        activeMatches: currentState.activeMatches.filter(
+          (match) => match.id !== activeMatch.id,
+        ),
 
-        completedMatches: [
-          ...currentState.completedMatches,
-          completedMatch,
-        ],
+        completedMatches: [...currentState.completedMatches, completedMatch],
 
         statusMessage:
           `${selectedCourt.name} ended the match after ` +
@@ -571,27 +502,23 @@ function App() {
   function cancelMatchOnCourt(courtId) {
     setSystemState((currentState) => {
       const selectedCourt = currentState.courts.find(
-        (court) => court.id === courtId
+        (court) => court.id === courtId,
       );
 
-      const activeMatch =
-        currentState.activeMatches.find(
-          (match) =>
-            match.id === selectedCourt?.currentMatchId
-        );
+      const activeMatch = currentState.activeMatches.find(
+        (match) => match.id === selectedCourt?.currentMatchId,
+      );
 
       if (!selectedCourt || !activeMatch) {
         return {
           ...currentState,
-          statusMessage:
-            "No active match was found to cancel.",
+          statusMessage: "No active match was found to cancel.",
         };
       }
 
       const cancelledAt = Date.now();
 
-      const matchPlayerIds =
-        getMatchPlayerIds(activeMatch);
+      const matchPlayerIds = getMatchPlayerIds(activeMatch);
 
       const stateAfterCancellation = {
         ...currentState,
@@ -603,7 +530,7 @@ function App() {
                 status: "queued",
                 waitingSince: cancelledAt,
               }
-            : player
+            : player,
         ),
 
         courts: currentState.courts.map((court) =>
@@ -613,91 +540,185 @@ function App() {
                 status: "available",
                 currentMatchId: null,
               }
-            : court
+            : court,
         ),
 
         waitingPlayerIds: [
           ...currentState.waitingPlayerIds,
           ...matchPlayerIds.filter(
-            (playerId) =>
-              !currentState.waitingPlayerIds.includes(
-                playerId
-              )
+            (playerId) => !currentState.waitingPlayerIds.includes(playerId),
           ),
         ],
 
-        activeMatches:
-          currentState.activeMatches.filter(
-            (match) => match.id !== activeMatch.id
-          ),
+        activeMatches: currentState.activeMatches.filter(
+          (match) => match.id !== activeMatch.id,
+        ),
 
         statusMessage:
           `${selectedCourt.name}'s match was cancelled. ` +
           "No game or playing time was recorded.",
       };
 
-      return fillPreparedMatchQueue(
-        stateAfterCancellation
-      );
+      return fillPreparedMatchQueue(stateAfterCancellation);
     });
   }
 
   function moveQueuedMatch(matchId, direction) {
     setSystemState((currentState) => {
-      const currentIndex =
-        currentState.matchQueue.findIndex(
-          (match) => match.id === matchId
-        );
+      const currentIndex = currentState.matchQueue.findIndex(
+        (match) => match.id === matchId,
+      );
 
-      const destinationIndex =
-        currentIndex + direction;
+      const destinationIndex = currentIndex + direction;
 
       if (
         currentIndex === -1 ||
         destinationIndex < 0 ||
-        destinationIndex >=
-          currentState.matchQueue.length
+        destinationIndex >= currentState.matchQueue.length
       ) {
         return currentState;
       }
 
-      const reorderedQueue = [
-        ...currentState.matchQueue,
-      ];
+      const reorderedQueue = [...currentState.matchQueue];
 
-      const [movedMatch] = reorderedQueue.splice(
-        currentIndex,
-        1
-      );
+      const [movedMatch] = reorderedQueue.splice(currentIndex, 1);
 
-      reorderedQueue.splice(
-        destinationIndex,
-        0,
-        movedMatch
-      );
+      reorderedQueue.splice(destinationIndex, 0, movedMatch);
 
       return {
         ...currentState,
         matchQueue: reorderedQueue,
-        statusMessage:
-          "The prepared match order was updated.",
+        statusMessage: "The prepared match order was updated.",
       };
     });
   }
 
+  function reorderQueuedMatchToIndex(matchId, destinationIndex) {
+    setSystemState((currentState) => {
+      const currentIndex = currentState.matchQueue.findIndex(
+        (match) => match.id === matchId,
+      );
+
+      if (currentIndex === -1) {
+        return currentState;
+      }
+
+      const reorderedQueue = [...currentState.matchQueue];
+      const [movedMatch] = reorderedQueue.splice(currentIndex, 1);
+
+      /*
+       * Removing the match may shift everything after it back
+       * by one slot, so the requested destination is adjusted
+       * to land in the spot the user actually dropped on.
+       */
+      let adjustedDestination =
+        currentIndex < destinationIndex
+          ? destinationIndex - 1
+          : destinationIndex;
+
+      adjustedDestination = Math.max(
+        0,
+        Math.min(adjustedDestination, reorderedQueue.length),
+      );
+
+      reorderedQueue.splice(adjustedDestination, 0, movedMatch);
+
+      if (
+        adjustedDestination === currentIndex &&
+        destinationIndex === currentIndex
+      ) {
+        return currentState;
+      }
+
+      return {
+        ...currentState,
+        matchQueue: reorderedQueue,
+        statusMessage: "The prepared match order was updated by drag and drop.",
+      };
+    });
+  }
+
+  function handleQueueDragStart(event, matchId) {
+    setDraggedMatchId(matchId);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", matchId);
+  }
+
+  function handleQueueDragEnd() {
+    setDraggedMatchId(null);
+    setDragOverQueueIndex(null);
+    setDragOverCourtId(null);
+  }
+
+  function handleQueueCardDragOver(event, index) {
+    if (!draggedMatchId) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+
+    if (dragOverQueueIndex !== index) {
+      setDragOverQueueIndex(index);
+    }
+  }
+
+  function handleQueueCardDrop(event, index) {
+    event.preventDefault();
+
+    const droppedMatchId =
+      draggedMatchId || event.dataTransfer.getData("text/plain");
+
+    if (droppedMatchId) {
+      reorderQueuedMatchToIndex(droppedMatchId, index);
+    }
+
+    setDraggedMatchId(null);
+    setDragOverQueueIndex(null);
+  }
+
+  function handleCourtDragOver(event, court) {
+    if (!draggedMatchId || court.status !== "available") {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+
+    if (dragOverCourtId !== court.id) {
+      setDragOverCourtId(court.id);
+    }
+  }
+
+  function handleCourtDragLeave(court) {
+    setDragOverCourtId((current) => (current === court.id ? null : current));
+  }
+
+  function handleCourtDrop(event, court) {
+    event.preventDefault();
+
+    const droppedMatchId =
+      draggedMatchId || event.dataTransfer.getData("text/plain");
+
+    if (droppedMatchId && court.status === "available") {
+      startMatchOnCourt(court.id, droppedMatchId);
+    }
+
+    setDraggedMatchId(null);
+    setDragOverCourtId(null);
+  }
+
   function rebuildQueuedMatch(matchId) {
     setSystemState((currentState) => {
-      const matchToRebuild =
-        currentState.matchQueue.find(
-          (match) => match.id === matchId
-        );
+      const matchToRebuild = currentState.matchQueue.find(
+        (match) => match.id === matchId,
+      );
 
       if (!matchToRebuild) {
         return currentState;
       }
 
-      const returnedPlayerIds =
-        getMatchPlayerIds(matchToRebuild);
+      const returnedPlayerIds = getMatchPlayerIds(matchToRebuild);
 
       const returnedAt = Date.now();
 
@@ -705,16 +726,13 @@ function App() {
         ...currentState,
 
         matchQueue: currentState.matchQueue.filter(
-          (match) => match.id !== matchId
+          (match) => match.id !== matchId,
         ),
 
         waitingPlayerIds: [
           ...currentState.waitingPlayerIds,
           ...returnedPlayerIds.filter(
-            (playerId) =>
-              !currentState.waitingPlayerIds.includes(
-                playerId
-              )
+            (playerId) => !currentState.waitingPlayerIds.includes(playerId),
           ),
         ],
 
@@ -725,11 +743,10 @@ function App() {
                 status: "queued",
                 waitingSince: returnedAt,
               }
-            : player
+            : player,
         ),
 
-        statusMessage:
-          "The prepared match was dissolved and rebuilt.",
+        statusMessage: "The prepared match was dissolved and rebuilt.",
       };
 
       return fillPreparedMatchQueue(stateWithoutMatch);
@@ -738,12 +755,10 @@ function App() {
 
   function prepareMoreMatches() {
     setSystemState((currentState) => {
-      const updatedState =
-        fillPreparedMatchQueue(currentState);
+      const updatedState = fillPreparedMatchQueue(currentState);
 
       const noMatchWasAdded =
-        updatedState.matchQueue.length ===
-        currentState.matchQueue.length;
+        updatedState.matchQueue.length === currentState.matchQueue.length;
 
       if (noMatchWasAdded) {
         return {
@@ -756,8 +771,7 @@ function App() {
 
       return {
         ...updatedState,
-        statusMessage:
-          "The prepared match queue was refilled.",
+        statusMessage: "The prepared match queue was refilled.",
       };
     });
   }
@@ -771,11 +785,7 @@ function App() {
     const player = findPlayerById(playerId);
 
     if (!player) {
-      return (
-        <div className="player-row">
-          Unknown player
-        </div>
-      );
+      return <div className="player-row">Unknown player</div>;
     }
 
     return (
@@ -783,22 +793,17 @@ function App() {
         <div className="player-main-info">
           <strong>{player.name}</strong>
 
-          <span
-            className={`skill-badge ${player.skillLevel.toLowerCase()}`}
-          >
+          <span className={`skill-badge ${player.skillLevel.toLowerCase()}`}>
             {player.skillLevel}
           </span>
         </div>
 
         <div className="player-stats">
           <span>
-            {player.gamesPlayed}{" "}
-            {player.gamesPlayed === 1 ? "game" : "games"}
+            {player.gamesPlayed} {player.gamesPlayed === 1 ? "game" : "games"}
           </span>
 
-          <span>
-            {formatSeconds(player.totalTimePlayed)} total
-          </span>
+          <span>{formatSeconds(player.totalTimePlayed)} total</span>
         </div>
       </div>
     );
@@ -807,9 +812,7 @@ function App() {
   function renderTeam(playerIds) {
     return (
       <div className="team-box">
-        {playerIds.map((playerId) =>
-          renderPlayerRow(playerId)
-        )}
+        {playerIds.map((playerId) => renderPlayerRow(playerId))}
       </div>
     );
   }
@@ -824,29 +827,25 @@ function App() {
   }
 
   const inGamePlayerCount = players.filter(
-    (player) => player.status === "inGame"
+    (player) => player.status === "inGame",
   ).length;
 
   const preparedPlayerCount = matchQueue.reduce(
-    (total, match) =>
-      total + getMatchPlayerIds(match).length,
-    0
+    (total, match) => total + getMatchPlayerIds(match).length,
+    0,
   );
 
   const availableCourts = courts.filter(
-    (court) => court.status === "available"
+    (court) => court.status === "available",
   );
 
   return (
     <main className="app-shell">
       <header className="top-bar">
         <Navbar />
-        
+
         <div className="top-actions">
-          <button
-            type="button"
-            onClick={prepareMoreMatches}
-          >
+          <button type="button" onClick={prepareMoreMatches}>
             Prepare Matches
           </button>
 
@@ -860,39 +859,38 @@ function App() {
         </div>
       </header>
 
-      <section
-        className="courts-section"
-        aria-labelledby="courts-title"
-      >
-        <h1
-          id="courts-title"
-          className="visually-hidden"
-        >
+      <section className="courts-section" aria-labelledby="courts-title">
+        <h1 id="courts-title" className="visually-hidden">
           Courts
         </h1>
 
         <div className="court-grid">
           {courts.map((court) => {
             const activeMatch = activeMatches.find(
-              (match) =>
-                match.id === court.currentMatchId
+              (match) => match.id === court.currentMatchId,
             );
 
             const elapsedSeconds = activeMatch
               ? Math.max(
                   0,
-                  Math.floor(
-                    (currentTime -
-                      activeMatch.startedAt) /
-                      1000
-                  )
+                  Math.floor((currentTime - activeMatch.startedAt) / 1000),
                 )
               : 0;
 
+            const isDropTarget =
+              !activeMatch &&
+              court.status === "available" &&
+              dragOverCourtId === court.id;
+
             return (
               <article
-                className="court-card"
+                className={`court-card ${
+                  isDropTarget ? "court-drop-target" : ""
+                }`}
                 key={court.id}
+                onDragOver={(event) => handleCourtDragOver(event, court)}
+                onDragLeave={() => handleCourtDragLeave(court)}
+                onDrop={(event) => handleCourtDrop(event, court)}
               >
                 <h2>{court.name}</h2>
 
@@ -903,8 +901,9 @@ function App() {
                     <div className="empty-court">
                       <strong>Available</strong>
                       <span>
-                        The next prepared match can start
-                        here.
+                        {draggedMatchId
+                          ? "Drop here to start this match."
+                          : "The next prepared match can start here."}
                       </span>
                     </div>
                   )}
@@ -921,9 +920,7 @@ function App() {
                         <button
                           type="button"
                           className="danger-button"
-                          onClick={() =>
-                            endMatchOnCourt(court.id)
-                          }
+                          onClick={() => endMatchOnCourt(court.id)}
                         >
                           End Match
                         </button>
@@ -931,9 +928,7 @@ function App() {
                         <button
                           type="button"
                           className="secondary-button"
-                          onClick={() =>
-                            cancelMatchOnCourt(court.id)
-                          }
+                          onClick={() => cancelMatchOnCourt(court.id)}
                         >
                           Cancel
                         </button>
@@ -943,9 +938,7 @@ function App() {
                     <button
                       type="button"
                       className="court-start-button"
-                      onClick={() =>
-                        startMatchOnCourt(court.id)
-                      }
+                      onClick={() => startMatchOnCourt(court.id)}
                       disabled={matchQueue.length === 0}
                     >
                       Start Next Match
@@ -958,10 +951,7 @@ function App() {
         </div>
       </section>
 
-      <section
-        className="queue-section"
-        aria-labelledby="queue-title"
-      >
+      <section className="queue-section" aria-labelledby="queue-title">
         <div className="queue-heading">
           <div>
             <h2 id="queue-title">Match Queue</h2>
@@ -974,71 +964,66 @@ function App() {
             </span>
 
             <span>
-              Waiting pool{" "}
-              <strong>{waitingPlayerIds.length}</strong>
+              Waiting pool <strong>{waitingPlayerIds.length}</strong>
             </span>
 
             <span>
-              Prepared{" "}
-              <strong>{preparedPlayerCount}</strong>
+              Prepared <strong>{preparedPlayerCount}</strong>
             </span>
 
             <span>
-              In game{" "}
-              <strong>{inGamePlayerCount}</strong>
+              In game <strong>{inGamePlayerCount}</strong>
             </span>
 
             <span>
-              Completed{" "}
-              <strong>{completedMatches.length}</strong>
+              Completed <strong>{completedMatches.length}</strong>
             </span>
           </div>
         </div>
 
         {matchQueue.length === 0 ? (
           <div className="empty-queue">
-            No match is prepared. At least four waiting
-            players are required.
+            No match is prepared. At least four waiting players are required.
           </div>
         ) : (
           <div className="queue-grid">
-            {matchQueue
-              .slice(0, MAX_PREPARED_MATCHES)
-              .map((match, index) => (
-                <article
-                  className={`queue-card ${
-                    index === 0
-                      ? "next-match-card"
-                      : ""
-                  }`}
-                  key={match.id}
-                >
-                  <header className="queue-card-header">
-                    <strong>
-                      {index === 0
-                        ? "Next Match"
-                        : `Queue ${index + 1}`}
-                    </strong>
+            {matchQueue.slice(0, MAX_PREPARED_MATCHES).map((match, index) => (
+              <article
+                className={`queue-card ${
+                  index === 0 ? "next-match-card" : ""
+                } ${draggedMatchId === match.id ? "queue-card-dragging" : ""} ${
+                  dragOverQueueIndex === index &&
+                  draggedMatchId &&
+                  draggedMatchId !== match.id
+                    ? "queue-card-drag-over"
+                    : ""
+                }`}
+                key={match.id}
+                draggable
+                onDragStart={(event) => handleQueueDragStart(event, match.id)}
+                onDragEnd={handleQueueDragEnd}
+                onDragOver={(event) => handleQueueCardDragOver(event, index)}
+                onDrop={(event) => handleQueueCardDrop(event, index)}
+              >
+                <header className="queue-card-header">
+                  <strong>
+                    <span className="drag-handle" aria-hidden="true">
+                      ⠿
+                    </span>{" "}
+                    {index === 0 ? "Next Match" : `Queue ${index + 1}`}
+                  </strong>
 
-                    <span>
-                      {match.id
-                        .split("-")
-                        .slice(0, 2)
-                        .join("-")}
-                    </span>
-                  </header>
+                  <span>{match.id.split("-").slice(0, 2).join("-")}</span>
+                </header>
 
-                  {renderMatch(match)}
+                {renderMatch(match)}
 
-                  <div className="queue-controls">
-
-                    <div className="queue-control-buttons">
+                <div className="queue-controls">
+                  <div className="queue-control-buttons">
                     <button
                       type="button"
                       className="move-up-button"
-                      onClick={() =>
-                        moveQueuedMatch(match.id, -1)
-                      }
+                      onClick={() => moveQueuedMatch(match.id, -1)}
                       disabled={index === 0}
                     >
                       Move Up
@@ -1047,50 +1032,39 @@ function App() {
                     <button
                       type="button"
                       className="move-down-button"
-                      onClick={() =>
-                        moveQueuedMatch(match.id, 1)
-                      }
-                      disabled={
-                        index === matchQueue.length - 1
-                      }
+                      onClick={() => moveQueuedMatch(match.id, 1)}
+                      disabled={index === matchQueue.length - 1}
                     >
                       Move Down
                     </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="rebuild-button"
-                      onClick={() =>
-                        rebuildQueuedMatch(match.id)
-                      }
-                    >
-                      Rebuild
-                    </button>
                   </div>
 
-                  <div className="direct-court-actions">
-                    {availableCourts.length === 0 ? (
-                      <span>No court available</span>
-                    ) : (
-                      availableCourts.map((court) => (
-                        <button
-                          type="button"
-                          key={court.id}
-                          onClick={() =>
-                            startMatchOnCourt(
-                              court.id,
-                              match.id
-                            )
-                          }
-                        >
-                          Start on {court.name}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </article>
-              ))}
+                  <button
+                    type="button"
+                    className="rebuild-button"
+                    onClick={() => rebuildQueuedMatch(match.id)}
+                  >
+                    Rebuild
+                  </button>
+                </div>
+
+                <div className="direct-court-actions">
+                  {availableCourts.length === 0 ? (
+                    <span>No court available</span>
+                  ) : (
+                    availableCourts.map((court) => (
+                      <button
+                        type="button"
+                        key={court.id}
+                        onClick={() => startMatchOnCourt(court.id, match.id)}
+                      >
+                        Start on {court.name}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </article>
+            ))}
           </div>
         )}
       </section>
