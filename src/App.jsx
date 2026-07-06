@@ -1047,22 +1047,6 @@ function App() {
                     Rebuild
                   </button>
                 </div>
-
-                <div className="direct-court-actions">
-                  {availableCourts.length === 0 ? (
-                    <span>No court available</span>
-                  ) : (
-                    availableCourts.map((court) => (
-                      <button
-                        type="button"
-                        key={court.id}
-                        onClick={() => startMatchOnCourt(court.id, match.id)}
-                      >
-                        Start on {court.name}
-                      </button>
-                    ))
-                  )}
-                </div>
               </article>
             ))}
           </div>

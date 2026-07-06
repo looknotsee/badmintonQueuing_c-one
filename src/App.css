@@ -326,7 +326,7 @@ button:disabled {
   border-color: var(--black);
 }
 
-.next-match-card .direct-court-actions {
+.next-match-card .player-row {
   border-top-color: #e5e7eb;
 }
 
@@ -404,23 +404,6 @@ button:disabled {
   display: flex;
   gap: 0.4rem;
   flex: 1;
-}
-
-.direct-court-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.4rem;
-  margin-top: 0.65rem;
-}
-
-.direct-court-actions {
-  padding-top: 0.55rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.35);
-}
-
-.direct-court-actions span {
-  font-size: var(--note-size);
 }
 
 .drag-handle {
