@@ -90,9 +90,9 @@ button {
   text-align: center;
   height: 2rem;
   padding: 0.4rem 1rem;
-  border: 0;
+  border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  background: var(--green-600);
+  background: transparent;
   color: #ffffff;
   font-family: var(--font-body);
   font-size: var(--text-sm);
@@ -120,7 +120,7 @@ button:disabled {
 
 .menuBtn {
   display: flex;
-  color: var(--ink-900);
+  color: var(--surface);
   font-size: var(--text-lg);
   background-color: transparent;
   border: none;
@@ -129,7 +129,7 @@ button:disabled {
 }
 
 .menuBtn:hover {
-  color: var(--ink-400);
+  color: var(s--green-600);
   transform: scale(1.1);
 }
 
@@ -142,8 +142,8 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.25rem;
-  background-color: var(--surface);
+  padding: 1rem;
+  background-color: var(--green-500);
 }
 
 .top-actions {
@@ -154,7 +154,7 @@ button:disabled {
 .courts-section {
   padding: 1.25rem 1.25rem 1.25rem 1.25rem;
   border-bottom: 2px solid var(--border);
-  background: var(--surface);
+  background: var(--green-tint-strong);
 }
 
 .court-grid {

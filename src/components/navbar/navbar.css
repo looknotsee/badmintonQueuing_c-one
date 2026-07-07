@@ -20,6 +20,7 @@ body {
   padding: 0 8px;
   gap: 5px;
   transition: left 0.3s ease-in;
+  z-index: 1;
 }
 
 .navbar.show {
