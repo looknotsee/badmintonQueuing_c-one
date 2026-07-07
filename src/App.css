@@ -525,6 +525,23 @@ button:disabled {
 
 .court-active {
   box-shadow: 0 0 20px var(--green-500);
+  border: solid 1px var(--green-500);
+}
+
+.court-overtime {
+  animation: dangerpulse 0.5s ease infinite alternate;
+}
+
+
+@keyframes dangerpulse {
+  from {
+    box-shadow: 0 0 20px var(--danger-700);
+  }
+
+  to {
+    box-shadow: 0 0 20px var(--surface);
+  }
+  
 }
 
 .court-drop-target {

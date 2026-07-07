@@ -880,6 +880,8 @@ function App() {
                 )
               : 0;
 
+            const isOvertime = activeMatch && elapsedSeconds > 30 * 60;
+
             const isDropTarget =
               !activeMatch &&
               court.status === "available" &&
@@ -887,9 +889,10 @@ function App() {
 
             return (
               <article
-                className={`court-card ${
-                  activeMatch ? "court-active" : ""
-                } ${isDropTarget ? "court-drop-target" : ""}`}
+                className={`court-card ${activeMatch ? "court-active" : ""} 
+                                       ${isDropTarget ? "court-drop-target" : ""}
+                                       ${isOvertime ? "court-overtime" : ""}`}
+
                 key={court.id}
                 onDragOver={(event) => handleCourtDragOver(event, court)}
                 onDragLeave={() => handleCourtDragLeave(court)}
