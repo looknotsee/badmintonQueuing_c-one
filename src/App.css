@@ -759,41 +759,170 @@ button:disabled {
   margin-bottom: 1rem;
 }
 
-.player-pool-table-wrapper {
-  overflow-x: auto;
+.player-pool-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 1rem;
+}
+
+.player-pool-item {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-}
-
-.player-pool-table {
-  width: 100%;
-  border-collapse: collapse;
   background: var(--surface);
-  font-size: var(--text-sm);
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
 }
 
-.player-pool-table th,
-.player-pool-table td {
-  padding: 0.8rem 0.9rem;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
+.player-pool-item:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+/*
+ * queued players have darkgreen outline
+*/
+
+.player-pool-item.queued {
+  border-color: var(--green-800);
+  box-shadow:
+    0 0 0 1px rgba(14, 86, 54, 0.6),
+    0 0 16px rgba(14, 86, 54, 0.24);
+}
+
+.player-pool-item.queued:hover {
+  border-color: var(--green-700);
+  box-shadow:
+    0 0 0 2px rgba(14, 86, 54, 0.65),
+    0 0 20px rgba(14, 86, 54, 0.32);
+}
+
+.player-pool-item.ingame {
+  border-color: var(--green-500);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--green-tint) 55%, transparent),
+      var(--surface) 52%
+    );
+}
+
+.player-pool-item.available {
+  border-color: var(--border);
+  opacity: 0.88;
+}
+
+.player-pool-item-header {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.player-pool-avatar {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface-sunken);
+  color: var(--green-700);
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 800;
+}
+
+.player-pool-item.queued .player-pool-avatar {
+  border-color: var(--green-700);
+  background: var(--green-tint);
+}
+
+.player-pool-identity {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+
+.player-pool-identity strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--ink-900);
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.player-pool-table th {
-  background: var(--surface-sunken);
+.player-pool-item-header .pool-status-badge {
+  align-self: flex-start;
+}
+
+.player-pool-location {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+}
+
+.player-pool-location span,
+.player-pool-stat span {
   color: var(--ink-500);
   font-size: var(--text-xs);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
-.player-pool-table tbody tr:last-child td {
-  border-bottom: 0;
+.player-pool-location strong {
+  overflow: hidden;
+  color: var(--ink-900);
+  font-size: var(--text-sm);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.player-pool-table tbody tr:hover {
-  background: var(--surface-muted);
+.player-pool-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.player-pool-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.player-pool-stat strong {
+  color: var(--ink-900);
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.player-pool-empty {
+  grid-column: 1 / -1;
+  padding: 2rem 1.25rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--ink-500);
+  text-align: center;
 }
 
 .pool-status-badge {

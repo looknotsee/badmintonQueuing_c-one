@@ -1472,55 +1472,63 @@ function App() {
               </div>
             </div>
 
-            <div className="player-pool-table-wrapper">
-              <table className="player-pool-table">
-                <thead>
-                  <tr>
-                    <th>Player</th>
-                    <th>Skill</th>
-                    <th>Status</th>
-                    <th>Current location</th>
-                    <th>Games</th>
-                    <th>Total playtime</th>
-                  </tr>
-                </thead>
+        <div className="player-pool-grid">
+          {filteredPlayers.map((player) => {
+            const playerLocation = getPlayerLocation(player.id);
 
-                <tbody>
-                  {filteredPlayers.map((player) => (
-                    <tr key={player.id}>
-                      <td>
-                        <strong>{player.name}</strong>
-                      </td>
-                      <td>
-                        <span
-                          className={`skill-badge ${player.skillLevel.toLowerCase()}`}
-                        >
-                          {player.skillLevel}
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          className={`pool-status-badge ${player.status.toLowerCase()}`}
-                        >
-                          {player.status === "inGame"
-                            ? "In game"
-                            : player.status}
-                        </span>
-                      </td>
-                      <td>{getPlayerLocation(player.id)}</td>
-                      <td>{player.gamesPlayed}</td>
-                      <td>{formatSeconds(player.totalTimePlayed)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          return (
+            <article
+              key={player.id}
+                className={`player-pool-item ${player.status.toLowerCase()}`}
+            >
+              <div className="player-pool-item-header">
+              <div className="player-pool-avatar" aria-hidden="true">
+              {player.name.charAt(0).toUpperCase()}
+          </div>
 
-              {filteredPlayers.length === 0 && (
-                <div className="player-pool-empty">
-                  No players match the current filters.
-                </div>
-              )}
-            </div>
+          <div className="player-pool-identity">
+            <strong>{player.name}</strong>
+
+            <span
+              className={`skill-badge ${player.skillLevel.toLowerCase()}`}
+            >
+              {player.skillLevel}
+            </span>
+          </div>
+
+          <span
+            className={`pool-status-badge ${player.status.toLowerCase()}`}
+          >
+            {player.status === "inGame" ? "In game" : player.status}
+          </span>
+        </div>
+
+        <div className="player-pool-location">
+          <span>Current location</span>
+          <strong>{playerLocation}</strong>
+        </div>
+
+        <div className="player-pool-stat-grid">
+          <div className="player-pool-stat">
+            <span>Games</span>
+            <strong>{player.gamesPlayed}</strong>
+          </div>
+
+          <div className="player-pool-stat">
+            <span>Total playtime</span>
+            <strong>{formatSeconds(player.totalTimePlayed)}</strong>
+          </div>
+        </div>
+      </article>
+    );
+  })}
+
+  {filteredPlayers.length === 0 && (
+    <div className="player-pool-empty">
+      No players match the current filters.
+    </div>
+  )}
+</div>
           </div>
         </section>
       )}
