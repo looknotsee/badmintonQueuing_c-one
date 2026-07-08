@@ -1,4 +1,4 @@
-import QueueCard from "../queueCard/QueueCard";
+import QueueCard from "../queuecard/Queuecard";
 import "./queueSection.css"
 
 const MAX_PREPARED_MATCHES = 4;

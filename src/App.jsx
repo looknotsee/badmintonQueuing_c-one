@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import Navbar from "./components/navbar/Navbar";
-import CourtSection from "./components/courtSection/CourtSection";
-import QueueSection from "./components/queueSection/QueueSection";
+import CourtSection from "./components/courtsection/Courtsection";
+import QueueSection from "./components/queuesection/Queuesection";
 import { formatSeconds } from "./components/utils/Formatseconds";
 import { sampleCourts, samplePlayers } from "./data/sampleData";
 

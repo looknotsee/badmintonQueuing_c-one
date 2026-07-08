@@ -1,4 +1,4 @@
-import PlayerRow from "../playerRow/PlayerRow";
+import PlayerRow from "../playerrow/Playerrow";
 import "./teamBox.css"
 
 function TeamBox({ playerIds, players }) {

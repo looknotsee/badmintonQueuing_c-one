@@ -1,5 +1,5 @@
-import TeamBox from "../teamBox/TeamBox";
-import { formatSeconds } from "../utils/formatSeconds";
+import TeamBox from "../teambox/Teambox";
+import { formatSeconds } from "../utils/Formatseconds";
 import "./courtCard.css";
 
 function CourtCard({

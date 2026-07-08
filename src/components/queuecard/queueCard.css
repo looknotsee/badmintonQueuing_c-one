@@ -109,3 +109,114 @@
     outline-offset: 2px;
     transform: translateY(-2px);
 }
+.queue-card {
+    min-width: 0;
+    padding: 0.65rem;
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
+    cursor: grab;
+    transition: transform 0.15s ease, box-shadow 0.15s ease,
+        outline-color 0.15s ease;
+}
+
+.queue-card:active {
+    cursor: grabbing;
+}
+
+.next-match-card {
+    border: 1px solid var(--green-500);
+    background-color: color-mix(in srgb, var(--green-tint-strong) 55%, transparent);
+    color: var(--ink-900);
+    box-shadow: var(--shadow-next);
+}
+
+.next-match-card .queue-card-header {
+    color: var(--ink-900);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+}
+
+.next-match-card .queue-card-header span {
+    font-size: var(--text-xs);
+    color: var(--ink-900);
+}
+
+.next-match-card .team-box {
+    border-color: var(--border-strong);
+}
+
+.next-match-card .player-row {
+    border-top-color: var(--border);
+}
+
+.next-match-card .move-up-button {
+    background: var(--green-600);
+    color: #ffffff;
+}
+
+.next-match-card .move-down-button {
+    background: transparent;
+    border: 1px solid var(--green-600);
+    color: var(--green-600);
+}
+
+.queue-card-header {
+    color: var(--ink-900);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+}
+
+.queue-card-header span {
+    overflow: hidden;
+    color: var(--ink-900);
+    font-size: var(--text-xs);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.queue-card:not(.next-match-card) .team-box {
+    border-color: color-mix(in srgb, var(--surface) 21%, transparent);
+}
+
+.queue-card .player-row {
+    background: var(--surface-muted);
+    color: var(--ink-900);
+}
+
+.queue-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.65rem;
+}
+
+.queue-control-buttons {
+    display: flex;
+    gap: 0.4rem;
+    flex: 1;
+}
+
+.drag-handle {
+    display: inline-block;
+    margin-right: 0.15rem;
+    cursor: grab;
+    opacity: 0.7;
+}
+
+.queue-card-dragging {
+    opacity: 0.35;
+}
+
+.queue-card-drag-over {
+    outline: 2px dashed var(--surface);
+    outline-offset: 2px;
+    transform: translateY(-2px);
+}

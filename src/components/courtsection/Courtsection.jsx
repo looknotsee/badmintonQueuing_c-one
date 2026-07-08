@@ -1,4 +1,4 @@
-import CourtCard from "../courtCard/CourtCard";
+import CourtCard from "../courtcard/Courtcard";
 import "./courtSection.css";
 
 function CourtSection({

@@ -1,4 +1,4 @@
-import { formatSeconds } from "../utils/formatSeconds";
+import { formatSeconds } from "../utils/Formatseconds";
 import "./playerRow.css";
 
 function PlayerRow({ player }) {

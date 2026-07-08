@@ -1,4 +1,4 @@
-import TeamBox from "../teamBox/TeamBox";
+import TeamBox from "../teambox/Teambox";
 import "./queueCard.css";
 
 function QueueCard({
