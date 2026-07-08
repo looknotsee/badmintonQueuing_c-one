@@ -1,0 +1,125 @@
+.court-card {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 0.9rem;
+    box-shadow: var(--shadow-sm);
+    outline: 2px solid transparent;
+    outline-offset: 3px;
+    transition: outline-color 0.15s ease, background-color 0.15s ease;
+}
+
+.court-card h2 {
+    margin: 0 0 0.55rem;
+    text-align: center;
+    font-size: var(--text-sm);
+    font-family: var(--font-display);
+    color: var(--ink-900);
+}
+
+.court-content {
+    flex: 1;
+}
+
+.court-action-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.court-action-row button {
+    flex: 2;
+}
+
+
+.court-timer {
+    flex: 2;
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-900);
+}
+
+.court-start-button {
+    width: 100%;
+    border-radius: var(--radius-pill);
+    background: var(--green-600);
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.vs-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0.35rem 0;
+}
+
+.vs-divider span {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-400);
+    padding: 0 0.6rem;
+}
+
+.vs-divider::before,
+.vs-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+.empty-court {
+    display: grid;
+    min-height: 150px;
+    place-items: center;
+    align-content: center;
+    padding: 1rem;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    color: var(--ink-500);
+    text-align: center;
+    font-size: var(--text-sm);
+}
+
+.court-footer {
+    margin-top: 0.75rem;
+}
+
+.court-drop-target {
+    outline-color: var(--green-500);
+    background-color: color-mix(in srgb, var(--green-500) 8%, transparent);
+}
+
+.court-drop-target .empty-court {
+    border-color: var(--green-500);
+    color: var(--green-700);
+}
+
+.court-overtime {
+    animation: dangerpulse 0.5s ease infinite alternate;
+}
+
+
+@keyframes dangerpulse {
+    from {
+        box-shadow: 0 0 20px var(--danger-700);
+    }
+
+    to {
+        box-shadow: 0 0 20px var(--surface);
+    }
+
+}
+
+.court-active {
+    box-shadow: 0 0 20px var(--green-500);
+    border: solid 1px var(--green-500);
+}

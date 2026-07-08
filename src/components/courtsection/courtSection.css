@@ -1,0 +1,11 @@
+.courts-section {
+  padding: 1.25rem 1.25rem 1.25rem 1.25rem;
+  border-bottom: 2px solid var(--border);
+  background: var(--green-tint-strong);
+}
+
+.court-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}

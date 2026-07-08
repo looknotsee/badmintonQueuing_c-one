@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import Navbar from "./components/navbar/Navbar";
+import CourtSection from "./components/courtSection/CourtSection";
+import QueueSection from "./components/queueSection/QueueSection";
+import { formatSeconds } from "./components/utils/Formatseconds";
 import { sampleCourts, samplePlayers } from "./data/sampleData";
 
 const STORAGE_KEY = "badminton-central-loop-v1";
@@ -282,25 +285,6 @@ function App() {
       console.error("Could not save the badminton state.", error);
     }
   }, [systemState]);
-
-  function formatSeconds(totalSeconds) {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    if (hours > 0) {
-      return `${hours}:${String(minutes).padStart(
-        2,
-        "0",
-      )}:${String(seconds).padStart(2, "0")}`;
-    }
-
-    return `${minutes}:${String(seconds).padStart(2, "0")}`;
-  }
-
-  function findPlayerById(playerId) {
-    return players.find((player) => player.id === playerId);
-  }
 
   function validateMatchStart(currentState, selectedCourt, selectedMatch) {
     if (!selectedCourt) {
@@ -924,54 +908,6 @@ function App() {
     setSystemState(createInitialState());
   }
 
-  function renderPlayerRow(playerId) {
-    const player = findPlayerById(playerId);
-
-    if (!player) {
-      return <div className="player-row">Unknown player</div>;
-    }
-
-    return (
-      <div className="player-row" key={player.id}>
-        <div className="player-main-info">
-          <strong>{player.name}</strong>
-
-          <span className={`skill-badge ${player.skillLevel.toLowerCase()}`}>
-            {player.skillLevel}
-          </span>
-        </div>
-
-        <div className="player-stats">
-          <span>
-            {player.gamesPlayed} {player.gamesPlayed === 1 ? "game" : "games"}
-          </span>
-
-          <span>{formatSeconds(player.totalTimePlayed)} total</span>
-        </div>
-      </div>
-    );
-  }
-
-  function renderTeam(playerIds) {
-    return (
-      <div className="team-box">
-        {playerIds.map((playerId) => renderPlayerRow(playerId))}
-      </div>
-    );
-  }
-
-  function renderMatch(match) {
-    return (
-      <>
-        {renderTeam(match.teamOne)}
-        <div className="vs-divider">
-          <span>vs</span>
-        </div>
-        {renderTeam(match.teamTwo)}
-      </>
-    );
-  }
-
   const inGamePlayerCount = players.filter(
     (player) => player.status === "inGame",
   ).length;
@@ -1145,214 +1081,40 @@ function App() {
 
       {activePage === "queue" && (
         <>
-          <section className="courts-section" aria-labelledby="courts-title">
-            <h1 id="courts-title" className="visually-hidden">
-              Courts
-            </h1>
+          <CourtSection
+            courts={courts}
+            activeMatches={activeMatches}
+            players={players}
+            currentTime={currentTime}
+            draggedMatchId={draggedMatchId}
+            dragOverCourtId={dragOverCourtId}
+            matchQueueLength={matchQueue.length}
+            onCourtDragOver={handleCourtDragOver}
+            onCourtDragLeave={handleCourtDragLeave}
+            onCourtDrop={handleCourtDrop}
+            onStartMatch={startMatchOnCourt}
+            onEndMatch={endMatchOnCourt}
+            onCancelMatch={cancelMatchOnCourt}
+          />
 
-            <div className="court-grid">
-              {courts.map((court) => {
-                const activeMatch = activeMatches.find(
-                  (match) => match.id === court.currentMatchId,
-                );
-
-                const elapsedSeconds = activeMatch
-                  ? Math.max(
-                      0,
-                      Math.floor(
-                        (currentTime - activeMatch.startedAt) / 1000,
-                      ),
-                    )
-                  : 0;
-
-                const isOvertime = activeMatch && elapsedSeconds > 30 * 60;
-
-                const isDropTarget =
-                  !activeMatch &&
-                  court.status === "available" &&
-                  dragOverCourtId === court.id;
-
-                return (
-                  <article
-                    className={`court-card ${
-                      activeMatch ? "court-active" : ""
-                    } ${isDropTarget ? "court-drop-target" : ""} ${
-                      isOvertime ? "court-overtime" : ""
-                    }`}
-                    key={court.id}
-                    onDragOver={(event) => handleCourtDragOver(event, court)}
-                    onDragLeave={() => handleCourtDragLeave(court)}
-                    onDrop={(event) => handleCourtDrop(event, court)}
-                  >
-                    <h2>{court.name}</h2>
-
-                    <div className="court-content">
-                      {activeMatch ? (
-                        renderMatch(activeMatch)
-                      ) : (
-                        <div className="empty-court">
-                          <strong>Available</strong>
-                          <span>
-                            {draggedMatchId
-                              ? "Drop here to start this match."
-                              : "The next prepared match can start here."}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="court-footer">
-                      {activeMatch ? (
-                        <div className="court-action-row">
-                          <div className="court-timer">
-                            {formatSeconds(elapsedSeconds)}
-                          </div>
-
-                          <button
-                            type="button"
-                            className="danger-button"
-                            onClick={() => endMatchOnCourt(court.id)}
-                          >
-                            End Match
-                          </button>
-
-                          <button
-                            type="button"
-                            className="secondary-button"
-                            onClick={() => cancelMatchOnCourt(court.id)}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          className="court-start-button"
-                          onClick={() => startMatchOnCourt(court.id)}
-                          disabled={matchQueue.length === 0}
-                        >
-                          Start Next Match
-                        </button>
-                      )}
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="queue-section" aria-labelledby="queue-title">
-            <div className="queue-heading">
-              <div>
-                <h2 id="queue-title">Match Queue</h2>
-                <p>{statusMessage}</p>
-              </div>
-
-              <div className="queue-summary">
-                <span>
-                  Total <strong>{players.length}</strong>
-                </span>
-                <span>
-                  Waiting pool <strong>{waitingPlayerIds.length}</strong>
-                </span>
-                <span>
-                  Prepared <strong>{preparedPlayerCount}</strong>
-                </span>
-                <span>
-                  In game <strong>{inGamePlayerCount}</strong>
-                </span>
-                <span>
-                  Completed <strong>{completedMatches.length}</strong>
-                </span>
-              </div>
-            </div>
-
-            {matchQueue.length === 0 ? (
-              <div className="empty-queue">
-                No match is prepared. At least four waiting players are
-                required.
-              </div>
-            ) : (
-              <div className="queue-grid">
-                {matchQueue
-                  .slice(0, MAX_PREPARED_MATCHES)
-                  .map((match, index) => (
-                    <article
-                      className={`queue-card ${
-                        index === 0 ? "next-match-card" : ""
-                      } ${
-                        draggedMatchId === match.id
-                          ? "queue-card-dragging"
-                          : ""
-                      } ${
-                        dragOverQueueIndex === index &&
-                        draggedMatchId &&
-                        draggedMatchId !== match.id
-                          ? "queue-card-drag-over"
-                          : ""
-                      }`}
-                      key={match.id}
-                      draggable
-                      onDragStart={(event) =>
-                        handleQueueDragStart(event, match.id)
-                      }
-                      onDragEnd={handleQueueDragEnd}
-                      onDragOver={(event) =>
-                        handleQueueCardDragOver(event, index)
-                      }
-                      onDrop={(event) => handleQueueCardDrop(event, index)}
-                    >
-                      <header className="queue-card-header">
-                        <strong>
-                          <span className="drag-handle" aria-hidden="true">
-                            ⠿
-                          </span>{" "}
-                          {index === 0
-                            ? "Next Match"
-                            : `Queue ${index + 1}`}
-                        </strong>
-
-                        <span>
-                          {match.id.split("-").slice(0, 2).join("-")}
-                        </span>
-                      </header>
-
-                      {renderMatch(match)}
-
-                      <div className="queue-controls">
-                        <div className="queue-control-buttons">
-                          <button
-                            type="button"
-                            className="move-up-button"
-                            onClick={() => moveQueuedMatch(match.id, -1)}
-                            disabled={index === 0}
-                          >
-                            Move Up
-                          </button>
-
-                          <button
-                            type="button"
-                            className="move-down-button"
-                            onClick={() => moveQueuedMatch(match.id, 1)}
-                            disabled={index === matchQueue.length - 1}
-                          >
-                            Move Down
-                          </button>
-                        </div>
-
-                        <button
-                          type="button"
-                          className="rebuild-button"
-                          onClick={() => openManualMatchEditor(match.id)}
-                        >
-                          Rebuild
-                        </button>
-                      </div>
-                    </article>
-                  ))}
-              </div>
-            )}
-          </section>
+          <QueueSection
+            matchQueue={matchQueue}
+            players={players}
+            statusMessage={statusMessage}
+            totalPlayers={players.length}
+            waitingPlayerCount={waitingPlayerIds.length}
+            preparedPlayerCount={preparedPlayerCount}
+            inGamePlayerCount={inGamePlayerCount}
+            completedMatchCount={completedMatches.length}
+            draggedMatchId={draggedMatchId}
+            dragOverQueueIndex={dragOverQueueIndex}
+            onQueueDragStart={handleQueueDragStart}
+            onQueueDragEnd={handleQueueDragEnd}
+            onQueueCardDragOver={handleQueueCardDragOver}
+            onQueueCardDrop={handleQueueCardDrop}
+            onMoveMatch={moveQueuedMatch}
+            onOpenEditor={openManualMatchEditor}
+          />
         </>
       )}
 
