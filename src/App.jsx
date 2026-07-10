@@ -5,6 +5,7 @@ import CourtSection from "./components/courtsection/Courtsection";
 import QueueSection from "./components/queuesection/Queuesection";
 import { formatSeconds } from "./components/utils/Formatseconds";
 import { sampleCourts, samplePlayers } from "./data/sampleData";
+
 import {
 createId,
 getMatchPlayerIds,
@@ -12,48 +13,11 @@ createPlayerMap,
 fillPreparedMatchQueue
 } from "./logic/matchmaking.js";
 
-const STORAGE_KEY = "badminton-central-loop-v1";
-
-function createInitialState() {
-  const currentTime = Date.now();
-
-  const playersWithWaitingTimes = samplePlayers.map((player, index) => ({
-    ...player,
-    status: "queued",
-
-    /*
-     * Earlier players receive an older waiting time so the
-     * initial ordering is predictable.
-     */
-    waitingSince: currentTime - (samplePlayers.length - index) * 1000,
-  }));
-
-  const initialState = {
-    players: playersWithWaitingTimes,
-    courts: sampleCourts,
-    waitingPlayerIds: playersWithWaitingTimes.map((player) => player.id),
-    matchQueue: [],
-    activeMatches: [],
-    completedMatches: [],
-    statusMessage: "The first four matches have been prepared.",
-  };
-
-  return fillPreparedMatchQueue(initialState);
-}
-
-function loadInitialState() {
-  try {
-    const savedState = localStorage.getItem(STORAGE_KEY);
-
-    if (savedState) {
-      return JSON.parse(savedState);
-    }
-  } catch (error) {
-    console.error("Could not load the saved badminton state.", error);
-  }
-
-  return createInitialState();
-}
+import {
+createInitialState,
+loadInitialState,
+STORAGE_KEY
+} from "./logic/queueState.js";
 
 function App() {
   const [systemState, setSystemState] = useState(loadInitialState);
