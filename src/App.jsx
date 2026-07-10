@@ -34,6 +34,10 @@ function App() {
   // Simple page navigation without adding another dependency.
   const [activePage, setActivePage] = useState("queue");
 
+  // Registration is now a modal rather than a page.
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [isPlayerpoolModalOpen, setIsPlayerpoolModalOpen] = useState(false);
+
   // Player registration and player-pool controls.
   const [registrationForm, setRegistrationForm] = useState({
     name: "",
@@ -841,16 +845,14 @@ function App() {
 
             <button
               type="button"
-              className={activePage === "register" ? "secondary-button" : ""}
-              onClick={() => setActivePage("register")}
+              onClick={() => setIsRegisterModalOpen(true)}
             >
               Register Player
             </button>
 
             <button
               type="button"
-              className={activePage === "players" ? "secondary-button" : ""}
-              onClick={() => setActivePage("players")}
+              onClick={() => setIsPlayerpoolModalOpen(true)}
             >
               Player Pool
             </button>
@@ -909,9 +911,22 @@ function App() {
         </>
       )}
 
-      {activePage === "register" && (
-        <section className="management-page" aria-labelledby="register-title">
-          <div className="management-card registration-card">
+      {isRegisterModalOpen && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsRegisterModalOpen(false);
+            }
+          }}
+        >
+          <section
+            className="modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="register-title"
+          >
             <div className="management-heading">
               <div>
                 <p className="management-kicker">Player entry</p>
@@ -922,13 +937,23 @@ function App() {
                 </p>
               </div>
 
-              <div className="management-count">
-                <strong>{players.length}</strong>
-                <span>current players</span>
-              </div>
+              <button
+                type="button"
+                className="match-editor-close"
+                onClick={() => setIsRegisterModalOpen(false)}
+                aria-label="Close registration"
+              >
+                ×
+              </button>
             </div>
 
-            <form className="registration-form" onSubmit={registerPlayer}>
+            <form
+              className="registration-form"
+              onSubmit={(event) => {
+                registerPlayer(event);
+                setIsRegisterModalOpen(false);
+              }}
+            >
               <div className="form-field">
                 <label htmlFor="player-name">Player name</label>
                 <input
@@ -973,15 +998,37 @@ function App() {
             <div className="management-status" role="status">
               {statusMessage}
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       )}
 
-      {activePage === "players" && (
-        <section className="management-page" aria-labelledby="players-title">
-          <div className="management-card player-pool-card">
+      {isPlayerpoolModalOpen && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsPlayerpoolModalOpen(false);
+            }
+          }}
+        >
+          <section
+            className="modal-card wide"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="register-title"
+          >
             <div className="management-heading">
               <div>
+
+                 <button
+                type="button"
+                className="match-editor-close"
+                onClick={() => setIsPlayerpoolModalOpen(false)}
+                aria-label="Close registration"
+              >
+                ×
+              </button>
                 <p className="management-kicker">Live attendance</p>
                 <h1 id="players-title">Current player pool</h1>
                 <p>
@@ -1082,13 +1129,13 @@ function App() {
     </div>
   )}
 </div>
-          </div>
         </section>
+          </div>
       )}
 
       {editingMatch && (
         <div
-          className="match-editor-backdrop"
+          className="modal-backdrop"
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
@@ -1097,7 +1144,7 @@ function App() {
           }}
         >
           <section
-            className="match-editor"
+            className="modal-card wide"
             role="dialog"
             aria-modal="true"
             aria-labelledby="match-editor-title"

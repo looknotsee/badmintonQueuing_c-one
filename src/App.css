@@ -235,24 +235,32 @@ button:disabled {
   padding-right: 0.75rem;
   border-right: 1px solid color-mix(in srgb, var(--surface) 35%, transparent);
 }
+
 .management-page {
   min-height: calc(100vh - 64px);
   padding: 2rem 1.25rem;
   background: var(--bg);
+  display: flex;
+}
+
+.management-container {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .management-card {
-  width: min(1100px, 100%);
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  max-width: 45vw;
+  width: 100%;
   padding: 1.5rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-md);
-}
-
-.registration-card {
-  max-width: 50vw;
 }
 
 .management-heading {
@@ -270,8 +278,8 @@ button:disabled {
   color: var(--ink-900);
 }
 
-.management-heading > div > p:not(.management-kicker),
-.match-editor-heading > div > p:not(.management-kicker) {
+.management-heading>div>p:not(.management-kicker),
+.match-editor-heading>div>p:not(.management-kicker) {
   max-width: 650px;
   margin: 0.5rem 0 0;
   color: var(--ink-500);
@@ -307,17 +315,17 @@ button:disabled {
 }
 
 .registration-form {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr) auto;
+  display: flex;
   align-items: end;
-  gap: 1rem;
+  justify-content: start;
+  gap: 2rem;
 }
 
 .form-field {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.2rem;
 }
 
 .form-field label,
@@ -331,8 +339,7 @@ button:disabled {
 .form-field select,
 .match-editor-slot select {
   width: 100%;
-  min-height: 42px;
-  padding: 0.65rem 0.75rem;
+  padding: 0.65rem 4rem 0.75rem 0.75rem;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   outline: none;
@@ -421,11 +428,9 @@ button:disabled {
 .player-pool-item.ingame {
   border-color: var(--green-500);
   background:
-    linear-gradient(
-      135deg,
+    linear-gradient(135deg,
       color-mix(in srgb, var(--green-tint) 55%, transparent),
-      var(--surface) 52%
-    );
+      var(--surface) 52%);
 }
 
 .player-pool-item.available {
@@ -567,8 +572,8 @@ button:disabled {
   text-align: center;
 }
 
-/* Manual queued-match editor */
-.match-editor-backdrop {
+/* Shared modal shell — used by the register modal and the match editor */
+.modal-backdrop {
   position: fixed;
   z-index: 1000;
   inset: 0;
@@ -578,14 +583,19 @@ button:disabled {
   background: rgba(20, 24, 21, 0.58);
 }
 
-.match-editor {
-  width: min(850px, 100%);
+.modal-card {
+  width: min(50vw, 100%);
   max-height: calc(100vh - 2.5rem);
   overflow-y: auto;
   padding: 1.5rem;
   border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: 0 22px 60px rgba(20, 24, 21, 0.25);
+}
+
+.modal-card.wide {
+  height: calc(100vh - 2.5rem);
+  width: min(90vw, 100%);
 }
 
 .match-editor-heading {
@@ -626,7 +636,7 @@ button:disabled {
   font-size: var(--text-md);
 }
 
-.match-editor-slot + .match-editor-slot {
+.match-editor-slot+.match-editor-slot {
   margin-top: 0.9rem;
 }
 
@@ -693,6 +703,13 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
+  .registration-form {
+    flex-direction: column;
+    justify-content: start;
+    align-items: start;
+  }
+
+
   .view-navigation {
     overflow-x: auto;
   }
@@ -701,4 +718,3 @@ button:disabled {
     flex: 0 0 auto;
   }
 }
-
