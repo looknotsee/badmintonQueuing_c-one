@@ -1042,7 +1042,7 @@ function App() {
           <nav className="view-navigation" aria-label="App pages">
             <button
               type="button"
-              className={activePage === "queue" ? "active-view-button" : ""}
+              className={activePage === "queue" ? "secondary-button" : ""}
               onClick={() => setActivePage("queue")}
             >
               Queue
@@ -1050,7 +1050,7 @@ function App() {
 
             <button
               type="button"
-              className={activePage === "register" ? "active-view-button" : ""}
+              className={activePage === "register" ? "secondary-button" : ""}
               onClick={() => setActivePage("register")}
             >
               Register Player
@@ -1058,7 +1058,7 @@ function App() {
 
             <button
               type="button"
-              className={activePage === "players" ? "active-view-button" : ""}
+              className={activePage === "players" ? "secondary-button" : ""}
               onClick={() => setActivePage("players")}
             >
               Player Pool

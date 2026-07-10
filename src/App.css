@@ -235,18 +235,6 @@ button:disabled {
   padding-right: 0.75rem;
   border-right: 1px solid color-mix(in srgb, var(--surface) 35%, transparent);
 }
-
-.view-navigation button {
-  background: transparent;
-  border-color: color-mix(in srgb, var(--surface) 45%, transparent);
-}
-
-.view-navigation .active-view-button {
-  background: var(--surface);
-  border-color: var(--surface);
-  color: var(--green-700);
-}
-
 .management-page {
   min-height: calc(100vh - 64px);
   padding: 2rem 1.25rem;
@@ -264,7 +252,7 @@ button:disabled {
 }
 
 .registration-card {
-  max-width: 760px;
+  max-width: 50vw;
 }
 
 .management-heading {
