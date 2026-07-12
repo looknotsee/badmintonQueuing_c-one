@@ -19,6 +19,12 @@ loadInitialState,
 STORAGE_KEY
 } from "./logic/queueState.js";
 
+import {
+  moveQueuedMatchState,
+  reorderQueuedMatchState,
+  prepareMoreMatchesState
+} from "./logic/queueActions.js";
+
 function App() {
   const [systemState, setSystemState] = useState(loadInitialState);
 
@@ -361,81 +367,30 @@ function App() {
     });
   }
 
-  function moveQueuedMatch(matchId, direction) {
-    setSystemState((currentState) => {
-      const currentIndex = currentState.matchQueue.findIndex(
-        (match) => match.id === matchId,
-      );
-
-      const destinationIndex = currentIndex + direction;
-
-      if (
-        currentIndex === -1 ||
-        destinationIndex < 0 ||
-        destinationIndex >= currentState.matchQueue.length
-      ) {
-        return currentState;
-      }
-
-      const reorderedQueue = [...currentState.matchQueue];
-
-      const [movedMatch] = reorderedQueue.splice(currentIndex, 1);
-
-      reorderedQueue.splice(destinationIndex, 0, movedMatch);
-
-      return {
-        ...currentState,
-        matchQueue: reorderedQueue,
-        statusMessage: "The prepared match order was updated.",
-      };
-    });
+  function moveQueuedMatch(matchId,direction) {
+    setSystemState((currentState) =>
+      moveQueuedMatchState(currentState, matchId, direction),
+    );
   }
 
   function reorderQueuedMatchToIndex(matchId, destinationIndex) {
-    setSystemState((currentState) => {
-      const currentIndex = currentState.matchQueue.findIndex(
-        (match) => match.id === matchId,
-      );
-
-      if (currentIndex === -1) {
-        return currentState;
-      }
-
-      const reorderedQueue = [...currentState.matchQueue];
-      const [movedMatch] = reorderedQueue.splice(currentIndex, 1);
-
-      /*
-       * Removing the match may shift everything after it back
-       * by one slot, so the requested destination is adjusted
-       * to land in the spot the user actually dropped on.
-       */
-      let adjustedDestination =
-        currentIndex < destinationIndex
-          ? destinationIndex - 1
-          : destinationIndex;
-
-      adjustedDestination = Math.max(
-        0,
-        Math.min(adjustedDestination, reorderedQueue.length),
-      );
-
-      reorderedQueue.splice(adjustedDestination, 0, movedMatch);
-
-      if (
-        adjustedDestination === currentIndex &&
-        destinationIndex === currentIndex
-      ) {
-        return currentState;
-      }
-
-      return {
-        ...currentState,
-        matchQueue: reorderedQueue,
-        statusMessage: "The prepared match order was updated by drag and drop.",
-      };
-    });
+    setSystemState((currentState) =>
+      reorderQueuedMatchState(
+        currentState,
+        matchId,
+        destinationIndex,
+      ),
+    );
   }
 
+   function prepareMoreMatches() {
+    setSystemState((currentState) =>
+      prepareMoreMatchesState(currentState),
+    );
+  }
+
+
+  
   function handleQueueDragStart(event, matchId) {
     setDraggedMatchId(matchId);
     event.dataTransfer.effectAllowed = "move";
@@ -675,29 +630,7 @@ function App() {
     closeManualMatchEditor();
   }
 
-  function prepareMoreMatches() {
-    setSystemState((currentState) => {
-      const updatedState = fillPreparedMatchQueue(currentState);
-
-      const noMatchWasAdded =
-        updatedState.matchQueue.length === currentState.matchQueue.length;
-
-      if (noMatchWasAdded) {
-        return {
-          ...updatedState,
-          statusMessage:
-            "No additional match could be prepared. " +
-            "At least four unassigned waiting players are required.",
-        };
-      }
-
-      return {
-        ...updatedState,
-        statusMessage: "The prepared match queue was refilled.",
-      };
-    });
-  }
-
+ 
   function resetPrototype() {
     localStorage.removeItem(STORAGE_KEY);
     setSystemState(createInitialState());
@@ -1212,5 +1145,6 @@ function App() {
     </main>
   );
 }
+
 
 export default App;
