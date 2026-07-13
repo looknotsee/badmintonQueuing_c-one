@@ -19,6 +19,18 @@ loadInitialState,
 STORAGE_KEY
 } from "./logic/queueState.js";
 
+import {
+  moveQueuedMatchState,
+  reorderQueuedMatchState,
+  prepareMoreMatchesState
+} from "./logic/queueActions.js";
+
+import {
+  getInGamePlayerCount,
+  getPreparedPlayerCount,
+  getPlayerLocation
+} from "./logic/selectors.js";
+
 function App() {
   const [systemState, setSystemState] = useState(loadInitialState);
 
@@ -703,40 +715,18 @@ function App() {
     setSystemState(createInitialState());
   }
 
-  const inGamePlayerCount = players.filter(
-    (player) => player.status === "inGame",
-  ).length;
+  const inGamePlayerCount = getInGamePlayerCount(players);
 
-  const preparedPlayerCount = matchQueue.reduce(
-    (total, match) => total + getMatchPlayerIds(match).length,
-    0,
-  );
+  const preparedPlayerCount = getPreparedPlayerCount(matchQueue);
 
-  function getPlayerLocation(playerId) {
-    const activeMatch = activeMatches.find((match) =>
-      getMatchPlayerIds(match).includes(playerId),
+  function findPlayerLocation(playerId) {
+    return getPlayerLocation(
+      playerId,
+      courts,
+      activeMatches,
+      matchQueue,
+      waitingPlayerIds
     );
-
-    if (activeMatch) {
-      const court = courts.find((item) => item.id === activeMatch.courtId);
-      return court?.name ?? "Active court";
-    }
-
-    const queuedMatchIndex = matchQueue.findIndex((match) =>
-      getMatchPlayerIds(match).includes(playerId),
-    );
-
-    if (queuedMatchIndex >= 0) {
-      return queuedMatchIndex === 0
-        ? "Next match"
-        : `Queue ${queuedMatchIndex + 1}`;
-    }
-
-    if (waitingPlayerIds.includes(playerId)) {
-      return "Waiting pool";
-    }
-
-    return "Unassigned";
   }
 
   const filteredPlayers = players
@@ -1074,9 +1064,9 @@ function App() {
 
         <div className="player-pool-grid">
           {filteredPlayers.map((player) => {
-            const playerLocation = getPlayerLocation(player.id);
+            const playerLocation = findPlayerLocation(player.id);
 
-          return (
+          return (  
             <article
               key={player.id}
                 className={`player-pool-item ${player.status.toLowerCase()}`}
