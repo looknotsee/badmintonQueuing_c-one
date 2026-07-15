@@ -36,6 +36,11 @@ import {
   cancelMatchOnCourtState,
 } from "./logic/courtActions.js"
 
+import {
+  getPlayerRegistrationError,
+  registerPlayerState,
+} from "./logic/playerActions.js";
+
 function App() {
   const [systemState, setSystemState] = useState(loadInitialState);
 
@@ -268,54 +273,33 @@ function App() {
   function registerPlayer(event) {
     event.preventDefault();
 
-    const trimmedName = registrationForm.name.trim();
-
-    if (!trimmedName) {
-      setSystemState((currentState) => ({
-        ...currentState,
-        statusMessage: "Enter a player name before registering.",
-      }));
-      return;
-    }
-
-    const duplicatePlayerExists = players.some(
-      (player) => player.name.toLowerCase() === trimmedName.toLowerCase(),
+    const registrationError = getPlayerRegistrationError(
+      players,
+      registrationForm.name,
     );
 
-    if (duplicatePlayerExists) {
+    if (registrationError) {
       setSystemState((currentState) => ({
         ...currentState,
-        statusMessage: `${trimmedName} is already registered.`,
+        statusMessage: registrationError,
       }));
+
       return;
     }
 
-    const registeredAt = Date.now();
-    const newPlayer = {
-      id: createId("player"),
-      name: trimmedName,
-      skillLevel: registrationForm.skillLevel,
-      gamesPlayed: 0,
-      totalTimePlayed: 0,
-      status: "queued",
-      waitingSince: registeredAt,
-    };
-
-    setSystemState((currentState) => {
-      const stateWithNewPlayer = {
-        ...currentState,
-        players: [...currentState.players, newPlayer],
-        waitingPlayerIds: [...currentState.waitingPlayerIds, newPlayer.id],
-        statusMessage: `${newPlayer.name} was registered and added to the waiting pool.`,
-      };
-
-      return fillPreparedMatchQueue(stateWithNewPlayer);
-    });
+    setSystemState((currentState) =>
+      registerPlayerState(
+        currentState,
+        registrationForm,
+      ),
+    );
 
     setRegistrationForm({
       name: "",
       skillLevel: "Beginner",
     });
+
+    setIsRegisterModalOpen(false);
   }
 
   function openManualMatchEditor(matchId) {
@@ -686,10 +670,7 @@ function App() {
 
             <form
               className="registration-form"
-              onSubmit={(event) => {
-                registerPlayer(event);
-                setIsRegisterModalOpen(false);
-              }}
+              onSubmit={registerPlayer}
             >
               <div className="form-field">
                 <label htmlFor="player-name">Player name</label>
