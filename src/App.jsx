@@ -41,6 +41,11 @@ import {
   registerPlayerState,
 } from "./logic/playerActions.js";
 
+import {
+  getManualMatchError,
+  updateManualMatchState,
+} from "./logic/matchSelectionValidation.js";
+
 function App() {
   const [systemState, setSystemState] = useState(loadInitialState);
 
@@ -336,87 +341,28 @@ function App() {
     setMatchEditorError("");
   }
 
-  function saveManualMatchChanges() {
-    const selectedPlayerIds = [
-      ...manualTeams.teamOne,
-      ...manualTeams.teamTwo,
-    ];
+function saveManualMatchChanges() {
+  const validationError = getManualMatchError(
+    systemState,
+    editingMatchId,
+    manualTeams,
+  );
 
-    if (selectedPlayerIds.some((playerId) => !playerId)) {
-      setMatchEditorError("Select four players before saving the match.");
-      return;
-    }
-
-    if (new Set(selectedPlayerIds).size !== 4) {
-      setMatchEditorError("Each player can only appear once in the match.");
-      return;
-    }
-
-    const matchBeingEdited = matchQueue.find(
-      (match) => match.id === editingMatchId,
-    );
-
-    if (!matchBeingEdited) {
-      setMatchEditorError("The queued match could not be found.");
-      return;
-    }
-
-    const originalPlayerIds = getMatchPlayerIds(matchBeingEdited);
-    const eligiblePlayerIds = new Set([
-      ...waitingPlayerIds,
-      ...originalPlayerIds,
-    ]);
-
-    const allPlayersAreEligible = selectedPlayerIds.every((playerId) =>
-      eligiblePlayerIds.has(playerId),
-    );
-
-    if (!allPlayersAreEligible) {
-      setMatchEditorError(
-        "Only players from this match or the waiting pool can be selected.",
-      );
-      return;
-    }
-
-    const updatedAt = Date.now();
-    const playersReturnedToPool = originalPlayerIds.filter(
-      (playerId) => !selectedPlayerIds.includes(playerId),
-    );
-
-    setSystemState((currentState) => ({
-      ...currentState,
-      matchQueue: currentState.matchQueue.map((match) =>
-        match.id === editingMatchId
-          ? {
-              ...match,
-              teamOne: [...manualTeams.teamOne],
-              teamTwo: [...manualTeams.teamTwo],
-              createdAt: updatedAt,
-            }
-          : match,
-      ),
-      waitingPlayerIds: [
-        ...currentState.waitingPlayerIds.filter(
-          (playerId) => !selectedPlayerIds.includes(playerId),
-        ),
-        ...playersReturnedToPool.filter(
-          (playerId) => !currentState.waitingPlayerIds.includes(playerId),
-        ),
-      ],
-      players: currentState.players.map((player) =>
-        playersReturnedToPool.includes(player.id)
-          ? {
-              ...player,
-              status: "queued",
-              waitingSince: updatedAt,
-            }
-          : player,
-      ),
-      statusMessage: "The queued match was manually updated.",
-    }));
-
-    closeManualMatchEditor();
+  if (validationError) {
+    setMatchEditorError(validationError);
+    return;
   }
+
+  setSystemState((currentState) =>
+    updateManualMatchState(
+      currentState,
+      editingMatchId,
+      manualTeams,
+    ),
+  );
+
+  closeManualMatchEditor();
+}
 
   function prepareMoreMatches() {
     setSystemState((currentState) => {
