@@ -39,6 +39,7 @@ import {
 import {
   getPlayerRegistrationError,
   registerPlayerState,
+  removePlayerState
 } from "./logic/playerActions.js";
 
 import {
@@ -72,6 +73,9 @@ function App() {
   });
   const [playerSearch, setPlayerSearch] = useState("");
   const [playerStatusFilter, setPlayerStatusFilter] = useState("all");
+
+  // Player removal
+  const [pendingRemovalPlayerId, setPendingRemovalPlayerId] = useState(null);
 
   // Manual match editor state.
   const [editingMatchId, setEditingMatchId] = useState(null);
@@ -305,6 +309,27 @@ function App() {
     });
 
     setIsRegisterModalOpen(false);
+  }
+
+  function requestPlayerRemoval(playerId) {
+  setPendingRemovalPlayerId(playerId);
+  }
+
+  function cancelPlayerRemoval() {
+    setPendingRemovalPlayerId(null);
+  }
+
+  function confirmPlayerRemoval(playerId) {
+    setSystemState((currentState) =>
+      removePlayerState(currentState, playerId),
+   );
+
+    setPendingRemovalPlayerId(null);
+  }
+
+  function closePlayerPoolModal() {
+    setIsPlayerpoolModalOpen(false);
+    setPendingRemovalPlayerId(null);
   }
 
   function openManualMatchEditor(matchId) {
@@ -688,7 +713,7 @@ function saveManualMatchChanges() {
                  <button
                 type="button"
                 className="match-editor-close"
-                onClick={() => setIsPlayerpoolModalOpen(false)}
+                onClick={closePlayerPoolModal}
                 aria-label="Close registration"
               >
                 ×
@@ -740,12 +765,18 @@ function saveManualMatchChanges() {
           {filteredPlayers.map((player) => {
             const playerLocation = findPlayerLocation(player.id);
 
+            const removalIsPending =
+            pendingRemovalPlayerId === player.id;
+
+            const playerCanBeRemoved =
+            player.status !== "inGame";
+
           return (  
             <article
               key={player.id}
                 className={`player-pool-item ${player.status.toLowerCase()}`}
             >
-              <div className="player-pool-item-header">
+              <div className="player-pool-item-header"> 
               <div className="player-pool-avatar" aria-hidden="true">
               {player.name.charAt(0).toUpperCase()}
           </div>
@@ -760,12 +791,53 @@ function saveManualMatchChanges() {
             </span>
           </div>
 
+          <button
+            type="button"
+            className="remove-player-button"
+            onClick={() => requestPlayerRemoval(player.id)}
+            disabled={!playerCanBeRemoved}
+            title={
+              playerCanBeRemoved
+                ? `Remove ${player.name}`
+                : "Players cannot be removed during an active match."
+            }
+            aria-label={`Remove ${player.name}`}
+            >
+            Remove
+          </button>
+
           <span
             className={`pool-status-badge ${player.status.toLowerCase()}`}
           >
             {player.status === "inGame" ? "In game" : player.status}
           </span>
         </div>
+
+        {removalIsPending && (
+          <div className="remove-player-confirmation">
+            <p>
+              Remove <strong>{player.name}</strong> from the current player pool?
+            </p>
+
+          <div className="remove-player-confirmation-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={cancelPlayerRemoval}
+            >
+            Cancel
+            </button>
+
+            <button
+              type="button"
+              className="danger-button"
+              onClick={() => confirmPlayerRemoval(player.id)}
+            >
+            Confirm Remove
+            </button>
+          </div>
+        </div>
+     )}
 
         <div className="player-pool-location">
           <span>Current location</span>

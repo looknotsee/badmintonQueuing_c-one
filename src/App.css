@@ -371,6 +371,70 @@ button:disabled {
   font-size: var(--text-sm);
 }
 
+.remove-player-button {
+  margin-left: 0;
+  height: 1.8rem;
+  padding: 0.25rem 0.65rem;
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  background: transparent;
+  color: #b91c1c;
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  opacity: 0;
+  transition:
+    opacity 150ms ease,
+    background-color 150ms ease;
+}
+
+.player-pool-item:hover .remove-player-button,
+.remove-player-button:focus-visible {
+  opacity: 1;
+}
+
+.remove-player-button:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.remove-player-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.remove-player-confirmation {
+  margin-top: 0.9rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  border-radius: 0.75rem;
+  background: rgba(220, 38, 38, 0.05);
+}
+
+.remove-player-confirmation p {
+  margin: 0;
+}
+
+.remove-player-confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.danger-button {
+  border-color: #b91c1c;
+  background: #b91c1c;
+  color: white;
+}
+
+.danger-button:hover {
+  background: #991b1b;
+}
+
+@media (hover: none) {
+  .remove-player-button {
+    opacity: 1;
+  }
+}
+
 .player-pool-toolbar {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(180px, 260px);
@@ -440,9 +504,9 @@ button:disabled {
 
 .player-pool-item-header {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) auto;
+  grid-template-columns: 42px minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .player-pool-avatar {
