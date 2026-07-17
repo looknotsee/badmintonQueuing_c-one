@@ -4,6 +4,8 @@ import Navbar from "./components/navbar/Navbar";
 import CourtSection from "./components/courtsection/Courtsection";
 import QueueSection from "./components/queuesection/Queuesection";
 import { formatSeconds } from "./components/utils/Formatseconds";
+import RegisterModal from "./components/registermodal/RegisterModal";
+import PlayerPoolModal from "./components/playerpool/PlayerPoolModal";
 import { sampleCourts, samplePlayers } from "./data/sampleData";
 
 import {
@@ -603,271 +605,29 @@ function saveManualMatchChanges() {
         </>
       )}
 
-      {isRegisterModalOpen && (
-        <div
-          className="modal-backdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setIsRegisterModalOpen(false);
-            }
-          }}
-        >
-          <section
-            className="modal-card"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="register-title"
-          >
-            <div className="management-heading">
-              <div>
-                <p className="management-kicker">Player entry</p>
-                <h1 id="register-title">Register a player</h1>
-                <p>
-                  New players enter the waiting pool with zero games and zero
-                  recorded playtime.
-                </p>
-              </div>
+      <RegisterModal
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        registrationForm={registrationForm}
+        setRegistrationForm={setRegistrationForm}
+        registerPlayer={registerPlayer}
+        statusMessage={statusMessage}
+/>
 
-              <button
-                type="button"
-                className="match-editor-close"
-                onClick={() => setIsRegisterModalOpen(false)}
-                aria-label="Close registration"
-              >
-                ×
-              </button>
-            </div>
-
-            <form
-              className="registration-form"
-              onSubmit={registerPlayer}
-            >
-              <div className="form-field">
-                <label htmlFor="player-name">Player name</label>
-                <input
-                  id="player-name"
-                  type="text"
-                  value={registrationForm.name}
-                  onChange={(event) =>
-                    setRegistrationForm((currentForm) => ({
-                      ...currentForm,
-                      name: event.target.value,
-                    }))
-                  }
-                  placeholder="Example: Cruz, A."
-                  autoComplete="off"
-                />
-              </div>
-
-              <div className="form-field">
-                <label htmlFor="player-skill">Skill level</label>
-                <select
-                  id="player-skill"
-                  value={registrationForm.skillLevel}
-                  onChange={(event) =>
-                    setRegistrationForm((currentForm) => ({
-                      ...currentForm,
-                      skillLevel: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="Beginner">Beginner</option>
-                  <option value="Intermediate">Intermediate</option>
-                  <option value="Expert">Expert</option>
-                  <option value="Unknown">Unknown</option>
-                </select>
-              </div>
-
-              <button type="submit" className="primary-management-button">
-                Register and Queue Player
-              </button>
-            </form>
-
-            <div className="management-status" role="status">
-              {statusMessage}
-            </div>
-          </section>
-        </div>
-      )}
-
-      {isPlayerpoolModalOpen && (
-        <div
-          className="modal-backdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setIsPlayerpoolModalOpen(false);
-            }
-          }}
-        >
-          <section
-            className="modal-card wide"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="register-title"
-          >
-            <div className="management-heading">
-              <div>
-
-                 <button
-                type="button"
-                className="match-editor-close"
-                onClick={closePlayerPoolModal}
-                aria-label="Close registration"
-              >
-                ×
-              </button>
-                <p className="management-kicker">Live attendance</p>
-                <h1 id="players-title">Current player pool</h1>
-                <p>
-                  Search the full pool and see where every registered player is
-                  currently assigned.
-                </p>
-              </div>
-
-              <div className="management-count">
-                <strong>{filteredPlayers.length}</strong>
-                <span>shown</span>
-              </div>
-            </div>
-
-            <div className="player-pool-toolbar">
-              <div className="form-field">
-                <label htmlFor="player-search">Search players</label>
-                <input
-                  id="player-search"
-                  type="search"
-                  value={playerSearch}
-                  onChange={(event) => setPlayerSearch(event.target.value)}
-                  placeholder="Search by name"
-                />
-              </div>
-
-              <div className="form-field">
-                <label htmlFor="player-status-filter">Status</label>
-                <select
-                  id="player-status-filter"
-                  value={playerStatusFilter}
-                  onChange={(event) =>
-                    setPlayerStatusFilter(event.target.value)
-                  }
-                >
-                  <option value="all">All statuses</option>
-                  <option value="queued">Queued</option>
-                  <option value="inGame">In game</option>
-                  <option value="available">Available</option>
-                </select>
-              </div>
-            </div>
-
-        <div className="player-pool-grid">
-          {filteredPlayers.map((player) => {
-            const playerLocation = findPlayerLocation(player.id);
-
-            const removalIsPending =
-            pendingRemovalPlayerId === player.id;
-
-            const playerCanBeRemoved =
-            player.status !== "inGame";
-
-          return (  
-            <article
-              key={player.id}
-                className={`player-pool-item ${player.status.toLowerCase()}`}
-            >
-              <div className="player-pool-item-header"> 
-              <div className="player-pool-avatar" aria-hidden="true">
-              {player.name.charAt(0).toUpperCase()}
-          </div>
-
-          <div className="player-pool-identity">
-            <strong>{player.name}</strong>
-
-            <span
-              className={`skill-badge ${player.skillLevel.toLowerCase()}`}
-            >
-              {player.skillLevel}
-            </span>
-          </div>
-
-          <button
-            type="button"
-            className="remove-player-button"
-            onClick={() => requestPlayerRemoval(player.id)}
-            disabled={!playerCanBeRemoved}
-            title={
-              playerCanBeRemoved
-                ? `Remove ${player.name}`
-                : "Players cannot be removed during an active match."
-            }
-            aria-label={`Remove ${player.name}`}
-            >
-            Remove
-          </button>
-
-          <span
-            className={`pool-status-badge ${player.status.toLowerCase()}`}
-          >
-            {player.status === "inGame" ? "In game" : player.status}
-          </span>
-        </div>
-
-        {removalIsPending && (
-          <div className="remove-player-confirmation">
-            <p>
-              Remove <strong>{player.name}</strong> from the current player pool?
-            </p>
-
-          <div className="remove-player-confirmation-actions">
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={cancelPlayerRemoval}
-            >
-            Cancel
-            </button>
-
-            <button
-              type="button"
-              className="danger-button"
-              onClick={() => confirmPlayerRemoval(player.id)}
-            >
-            Confirm Remove
-            </button>
-          </div>
-        </div>
-     )}
-
-        <div className="player-pool-location">
-          <span>Current location</span>
-          <strong>{playerLocation}</strong>
-        </div>
-
-        <div className="player-pool-stat-grid">
-          <div className="player-pool-stat">
-            <span>Games</span>
-            <strong>{player.gamesPlayed}</strong>
-          </div>
-
-          <div className="player-pool-stat">
-            <span>Total playtime</span>
-            <strong>{formatSeconds(player.totalTimePlayed)}</strong>
-          </div>
-        </div>
-      </article>
-    );
-  })}
-
-  {filteredPlayers.length === 0 && (
-    <div className="player-pool-empty">
-      No players match the current filters.
-    </div>
-  )}
-</div>
-        </section>
-          </div>
-      )}
+      <PlayerPoolModal
+        isOpen={isPlayerpoolModalOpen}
+        onClose={closePlayerPoolModal}
+        filteredPlayers={filteredPlayers}
+        playerSearch={playerSearch}
+        setPlayerSearch={setPlayerSearch}
+        playerStatusFilter={playerStatusFilter}
+        setPlayerStatusFilter={setPlayerStatusFilter}
+        pendingRemovalPlayerId={pendingRemovalPlayerId}
+        requestPlayerRemoval={requestPlayerRemoval}
+        cancelPlayerRemoval={cancelPlayerRemoval}
+        confirmPlayerRemoval={confirmPlayerRemoval}
+        findPlayerLocation={findPlayerLocation}
+      />
 
       {editingMatch && (
         <div
@@ -880,7 +640,7 @@ function saveManualMatchChanges() {
           }}
         >
           <section
-            className="modal-card wide"
+            className="modal-card"
             role="dialog"
             aria-modal="true"
             aria-labelledby="match-editor-title"
