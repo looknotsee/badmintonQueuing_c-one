@@ -8,7 +8,7 @@ export function createInitialState() {
 
   const playersWithWaitingTimes = samplePlayers.map((player, index) => ({
     ...player,
-    status: "queued",
+    status: "available",
 
     waitingSince: currentTime - (samplePlayers.length - index) * 1000,
   }));
@@ -31,7 +31,9 @@ export function loadInitialState() {
     const savedState = localStorage.getItem(STORAGE_KEY);
 
     if (savedState) {
-      return JSON.parse(savedState);
+        const parsedState = JSON.parse(savedState);
+
+        return fillPreparedMatchQueue(parsedState);
     }
   } catch (error) {
     console.error("Could not load the saved badminton state.", error);

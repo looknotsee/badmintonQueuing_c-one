@@ -116,14 +116,14 @@ export function sortWaitingPlayers(waitingPlayerIds, players) {
       return 0;
     }
 
-    if (firstPlayer.totalTimePlayed !== secondPlayer.totalTimePlayed) {
-      return firstPlayer.totalTimePlayed - secondPlayer.totalTimePlayed;
-    }
-
     if (firstPlayer.gamesPlayed !== secondPlayer.gamesPlayed) {
       return firstPlayer.gamesPlayed - secondPlayer.gamesPlayed;
     }
 
+    if (firstPlayer.totalTimePlayed !== secondPlayer.totalTimePlayed) {
+      return firstPlayer.totalTimePlayed - secondPlayer.totalTimePlayed;
+    
+    }
     return firstPlayer.waitingSince - secondPlayer.waitingSince;
   });
 }
@@ -156,9 +156,98 @@ export function fillPreparedMatchQueue(currentState) {
     updatedQueue.push(preparedMatch);
   }
 
-  return {
-    ...currentState,
+    const queuedPlayerIds = new Set(
+      updatedQueue.flatMap(getMatchPlayerIds),
+    );
+
+    const activePlayerIds = new Set(
+      currentState.activeMatches.flatMap(getMatchPlayerIds),
+    );
+
+    return {
+      ...currentState,
+
+    players: currentState.players.map((player) => {
+        if (activePlayerIds.has(player.id)) {
+          return {
+            ...player,
+            status: "inGame",
+          };
+        }
+
+    if (queuedPlayerIds.has(player.id)) {
+      return {
+        ...player,
+        status: "queued",
+      };
+    }
+
+    return {
+        ...player,
+        status: "available",
+    };
+  }),
+
     waitingPlayerIds: updatedWaitingPlayerIds,
     matchQueue: updatedQueue,
   };
+  
+}
+
+export function rebuildProvisionalMatchQueue(currentState) {
+  /*
+   * Queue position 1 is the confirmed next match.
+   * Queue positions 2–4 are provisional and may be rebuilt.
+   */
+  const lockedMatch = currentState.matchQueue[0] ?? null;
+
+  const provisionalMatches =
+    currentState.matchQueue.slice(1);
+
+  const lockedPlayerIds = new Set(
+    lockedMatch
+      ? getMatchPlayerIds(lockedMatch)
+      : [],
+  );
+
+  const provisionalPlayerIds =
+    provisionalMatches.flatMap(getMatchPlayerIds);
+
+  const activePlayerIds = new Set(
+    currentState.activeMatches.flatMap(getMatchPlayerIds),
+  );
+
+  const existingPlayerIds = new Set(
+    currentState.players.map((player) => player.id),
+  );
+
+  /*
+   * The candidate pool contains:
+   * - currently available players;
+   * - players from queues 2–4;
+   * - players who just finished and were returned to waitingPlayerIds.
+   */
+  const candidatePlayerIds = [
+    ...new Set([
+      ...currentState.waitingPlayerIds,
+      ...provisionalPlayerIds,
+    ]),
+  ].filter(
+    (playerId) =>
+      existingPlayerIds.has(playerId) &&
+      !lockedPlayerIds.has(playerId) &&
+      !activePlayerIds.has(playerId),
+  );
+
+  const stateWithOnlyLockedMatch = {
+    ...currentState,
+
+    matchQueue: lockedMatch
+      ? [lockedMatch]
+      : [],
+
+    waitingPlayerIds: candidatePlayerIds,
+  };
+
+  return fillPreparedMatchQueue(stateWithOnlyLockedMatch);
 }

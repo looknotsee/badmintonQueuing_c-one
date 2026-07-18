@@ -100,15 +100,30 @@ export function updateManualMatchState(
       ),
     ],
 
-    players: currentState.players.map((player) =>
-      playersReturnedToPool.includes(player.id)
-        ? {
-            ...player,
-            status: "queued",
-            waitingSince: updatedAt,
-          }
-        : player,
-    ),
+    players: currentState.players.map((player) => {
+      const playerWasSelected =
+        selectedPlayerIds.includes(player.id);
+
+      const playerWasReturnedToPool =
+        playersReturnedToPool.includes(player.id);
+
+      if (playerWasSelected) {
+        return {
+          ...player,
+          status: "queued",
+        };
+      }
+
+      if (playerWasReturnedToPool) {
+        return {
+          ...player,
+          status: "available",
+          waitingSince: updatedAt,
+      };
+    }
+
+    return player;
+    }),
 
     statusMessage: "The queued match was manually updated.",
   };

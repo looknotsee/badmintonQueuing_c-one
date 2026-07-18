@@ -35,7 +35,7 @@ export function registerPlayerState(
     skillLevel,
     gamesPlayed: 0,
     totalTimePlayed: 0,
-    status: "queued",
+    status: "available",
     waitingSince: registeredAt,
   };
 
@@ -128,7 +128,7 @@ export function registerPlayerState(
          releasedPlayerIds.has(player.id)
            ? {
                 ...player,
-                status: "queued",
+                status: "available",
                 waitingSince: removedAt,
               }
            : player,

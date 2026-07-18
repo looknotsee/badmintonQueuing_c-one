@@ -308,9 +308,7 @@ function App() {
     setRegistrationForm({
       name: "",
       skillLevel: "Beginner",
-    });
-
-    setIsRegisterModalOpen(false);
+    });     
   }
 
   function requestPlayerRemoval(playerId) {

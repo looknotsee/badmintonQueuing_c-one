@@ -5,6 +5,7 @@ import {
   createPlayerMap,
   fillPreparedMatchQueue,
   getMatchPlayerIds,
+  rebuildProvisionalMatchQueue
 } from "./matchmaking.js";
 
 function validateMatchStart(
@@ -176,7 +177,7 @@ export function endMatchOnCourtState(
       matchPlayerIds.includes(player.id)
         ? {
             ...player,
-            status: "queued",
+            status: "available",
             gamesPlayed: player.gamesPlayed + 1,
             totalTimePlayed:
               player.totalTimePlayed + matchDuration,
@@ -218,7 +219,7 @@ export function endMatchOnCourtState(
       "The players returned to the waiting pool.",
   };
 
-  return fillPreparedMatchQueue(stateAfterEnding);
+  return rebuildProvisionalMatchQueue(stateAfterEnding);
 }
 
 export function cancelMatchOnCourtState(
@@ -250,7 +251,7 @@ export function cancelMatchOnCourtState(
       matchPlayerIds.includes(player.id)
         ? {
             ...player,
-            status: "queued",
+            status: "available",
             waitingSince: cancelledAt,
           }
         : player,
@@ -283,5 +284,7 @@ export function cancelMatchOnCourtState(
       "No game or playing time was recorded.",
   };
 
-  return fillPreparedMatchQueue(stateAfterCancellation);
+  return rebuildProvisionalMatchQueue(
+    stateAfterCancellation,
+  );
 }
