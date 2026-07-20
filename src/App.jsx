@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import Navbar from "./components/navbar/Navbar";
 import CourtSection from "./components/courtsection/Courtsection";
@@ -16,14 +16,11 @@ fillPreparedMatchQueue
 
 import {
 createInitialState,
-loadInitialState,
-STORAGE_KEY
 } from "./logic/queueState.js";
 
 import {
   moveQueuedMatchState,
   reorderQueuedMatchState,
-  prepareMoreMatchesState
 } from "./logic/queueActions.js";
 
 import {
@@ -49,8 +46,20 @@ import {
   updateManualMatchState,
 } from "./logic/matchSelectionValidation.js";
 
+import {
+  initializeQueueState,
+  updateQueueState,
+  subscribeToQueueState
+} from "./services/queueRepository.js";
+
 function App() {
-  const [systemState, setSystemState] = useState(loadInitialState);
+
+  const [systemState, setSystemState] = useState(
+  () => createInitialState(),
+  );
+
+  const queueVersionRef = useRef(null);
+  const systemStateRef = useRef(systemState);
 
   // This causes active court timers to update every second.
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -98,6 +107,10 @@ function App() {
   } = systemState;
 
   useEffect(() => {
+  systemStateRef.current = systemState;
+}, [systemState]);
+
+  useEffect(() => {
     const timerId = setInterval(() => {
       setCurrentTime(Date.now());
     }, 1000);
@@ -105,111 +118,173 @@ function App() {
     return () => clearInterval(timerId);
   }, []);
 
-  // Save the entire local prototype whenever its state changes.
   useEffect(() => {
+  let requestWasCancelled = false;
+  let unsubscribeFromQueueState = null;
+
+  async function loadSharedQueueState() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(systemState));
+      const initialState = createInitialState();
+
+      const queueRecord = await initializeQueueState(
+        initialState,
+      );
+
+      if (requestWasCancelled) {
+        return;
+      }
+
+      queueVersionRef.current = queueRecord.version;
+      systemStateRef.current = queueRecord.state;
+      setSystemState(queueRecord.state);
+
+      unsubscribeFromQueueState =
+        subscribeToQueueState((updatedRecord) => {
+          if (requestWasCancelled) {
+            return;
+          }
+
+          const currentVersion =
+            queueVersionRef.current ?? 0;
+
+          /*
+           * Ignore duplicate or older events.
+           * This also prevents our own completed update
+           * from being unnecessarily applied twice.
+           */
+          if (updatedRecord.version <= currentVersion) {
+            return;
+          }
+
+          queueVersionRef.current =
+            updatedRecord.version;
+
+          systemStateRef.current =
+            updatedRecord.state;
+
+          setSystemState(updatedRecord.state);
+        });
     } catch (error) {
-      console.error("Could not save the badminton state.", error);
+      if (requestWasCancelled) {
+        return;
+      }
+
+      console.error(
+        "Could not initialize the shared queue.",
+        error,
+      );
+
+      setSystemState((currentState) => ({
+        ...currentState,
+        statusMessage:
+          `Backend connection failed: ${error.message}`,
+      }));
     }
-  }, [systemState]);
+  }
 
- function startMatchOnCourt(courtId, requestedMatchId = null) {
-  setSystemState((currentState) =>
-    startMatchOnCourtState(
-      currentState,
-      courtId,
-      requestedMatchId,
+  loadSharedQueueState();
+
+  return () => {
+    requestWasCancelled = true;
+
+    if (unsubscribeFromQueueState) {
+      unsubscribeFromQueueState();
+    }
+  };
+}, []);
+
+
+  async function commitSharedStateChange(stateTransition) {
+  const currentVersion = queueVersionRef.current;
+
+  if (currentVersion === null) {
+    console.error(
+      "The shared queue has not finished loading yet.",
+    );
+
+    return null;
+  }
+
+  try {
+    const currentState = systemStateRef.current;
+    const nextState = stateTransition(currentState);
+
+    const updatedRecord = await updateQueueState(
+      nextState,
+      currentVersion,
+    );
+
+    queueVersionRef.current = updatedRecord.version;
+    systemStateRef.current = updatedRecord.state;
+    setSystemState(updatedRecord.state);
+    
+    return updatedRecord;
+  } catch (error) {
+    console.error(
+      "Could not save the shared queue change.",
+      error,
+    );
+
+    setSystemState((currentState) => ({
+      ...currentState,
+      statusMessage: error.message,
+    }));
+
+    return null;
+  }
+}
+async function startMatchOnCourt(
+  courtId,
+  requestedMatchId = null,
+) {
+  await commitSharedStateChange(
+    (currentState) =>
+      startMatchOnCourtState(
+        currentState,
+        courtId,
+        requestedMatchId,
       ),
-    );
-  }
+  );
+}
 
-  function endMatchOnCourt(courtId) {
-    setSystemState((currentState) =>
+async function endMatchOnCourt(courtId) {
+  await commitSharedStateChange(
+    (currentState) =>
       endMatchOnCourtState(currentState, courtId),
-    );
-  }
+  );
+}
 
-  function cancelMatchOnCourt(courtId) {
-    setSystemState((currentState) =>
+async function cancelMatchOnCourt(courtId) {
+  await commitSharedStateChange(
+    (currentState) =>
       cancelMatchOnCourtState(currentState, courtId),
-    );
-  }
+  );
+}
 
-  function moveQueuedMatch(matchId, direction) {
-    setSystemState((currentState) => {
-      const currentIndex = currentState.matchQueue.findIndex(
-        (match) => match.id === matchId,
-      );
+async function moveQueuedMatch(matchId, direction) {
+  await commitSharedStateChange(
+    (currentState) =>
+      moveQueuedMatchState(
+        currentState,
+        matchId,
+        direction,
+      ),
+  );
+}
 
-      const destinationIndex = currentIndex + direction;
-
-      if (
-        currentIndex === -1 ||
-        destinationIndex < 0 ||
-        destinationIndex >= currentState.matchQueue.length
-      ) {
-        return currentState;
-      }
-
-      const reorderedQueue = [...currentState.matchQueue];
-
-      const [movedMatch] = reorderedQueue.splice(currentIndex, 1);
-
-      reorderedQueue.splice(destinationIndex, 0, movedMatch);
-
-      return {
-        ...currentState,
-        matchQueue: reorderedQueue,
-        statusMessage: "The prepared match order was updated.",
-      };
-    });
-  }
-
-  function reorderQueuedMatchToIndex(matchId, destinationIndex) {
-    setSystemState((currentState) => {
-      const currentIndex = currentState.matchQueue.findIndex(
-        (match) => match.id === matchId,
-      );
-
-      if (currentIndex === -1) {
-        return currentState;
-      }
-
-      const reorderedQueue = [...currentState.matchQueue];
-      const [movedMatch] = reorderedQueue.splice(currentIndex, 1);
-
-      /*
-       * Removing the match may shift everything after it back
-       * by one slot, so the requested destination is adjusted
-       * to land in the spot the user actually dropped on.
-       */
-      let adjustedDestination =
-        currentIndex < destinationIndex
-          ? destinationIndex - 1
-          : destinationIndex;
-
-      adjustedDestination = Math.max(
-        0,
-        Math.min(adjustedDestination, reorderedQueue.length),
-      );
-
-      reorderedQueue.splice(adjustedDestination, 0, movedMatch);
-
-      if (
-        adjustedDestination === currentIndex &&
-        destinationIndex === currentIndex
-      ) {
-        return currentState;
-      }
-
-      return {
-        ...currentState,
-        matchQueue: reorderedQueue,
-        statusMessage: "The prepared match order was updated by drag and drop.",
-      };
-    });
-  }
+async function reorderQueuedMatchToIndex(
+  matchId,
+  destinationIndex,
+) {
+  await commitSharedStateChange(
+    (currentState) =>
+      reorderQueuedMatchState(
+        currentState,
+        matchId,
+        destinationIndex,
+      ),
+  );
+}
 
   function handleQueueDragStart(event, matchId) {
     setDraggedMatchId(matchId);
@@ -281,35 +356,43 @@ function App() {
     setDragOverCourtId(null);
   }
 
-  function registerPlayer(event) {
-    event.preventDefault();
+  async function registerPlayer(event) {
+  event.preventDefault();
 
-    const registrationError = getPlayerRegistrationError(
-      players,
-      registrationForm.name,
-    );
+  const currentPlayers =
+    systemStateRef.current.players;
 
-    if (registrationError) {
-      setSystemState((currentState) => ({
-        ...currentState,
-        statusMessage: registrationError,
-      }));
+  const registrationError = getPlayerRegistrationError(
+    currentPlayers,
+    registrationForm.name,
+  );
 
-      return;
-    }
+  if (registrationError) {
+    setSystemState((currentState) => ({
+      ...currentState,
+      statusMessage: registrationError,
+    }));
 
-    setSystemState((currentState) =>
+    return;
+  }
+
+  const updatedRecord = await commitSharedStateChange(
+    (currentState) =>
       registerPlayerState(
         currentState,
         registrationForm,
       ),
-    );
+  );
 
-    setRegistrationForm({
-      name: "",
-      skillLevel: "Beginner",
-    });     
+  if (!updatedRecord) {
+    return;
   }
+
+  setRegistrationForm({
+    name: "",
+    skillLevel: "Beginner",
+  });
+}
 
   function requestPlayerRemoval(playerId) {
   setPendingRemovalPlayerId(playerId);
@@ -319,13 +402,18 @@ function App() {
     setPendingRemovalPlayerId(null);
   }
 
-  function confirmPlayerRemoval(playerId) {
-    setSystemState((currentState) =>
+  async function confirmPlayerRemoval(playerId) {
+  const updatedRecord = await commitSharedStateChange(
+    (currentState) =>
       removePlayerState(currentState, playerId),
-   );
+  );
 
-    setPendingRemovalPlayerId(null);
+  if (!updatedRecord) {
+    return;
   }
+
+  setPendingRemovalPlayerId(null);
+}
 
   function closePlayerPoolModal() {
     setIsPlayerpoolModalOpen(false);
@@ -366,9 +454,11 @@ function App() {
     setMatchEditorError("");
   }
 
-function saveManualMatchChanges() {
+  async function saveManualMatchChanges() {
+  const currentState = systemStateRef.current;
+
   const validationError = getManualMatchError(
-    systemState,
+    currentState,
     editingMatchId,
     manualTeams,
   );
@@ -378,44 +468,27 @@ function saveManualMatchChanges() {
     return;
   }
 
-  setSystemState((currentState) =>
-    updateManualMatchState(
-      currentState,
-      editingMatchId,
-      manualTeams,
-    ),
+  const updatedRecord = await commitSharedStateChange(
+    (latestState) =>
+      updateManualMatchState(
+        latestState,
+        editingMatchId,
+        manualTeams,
+      ),
   );
+
+  if (!updatedRecord) {
+    return;
+  }
 
   closeManualMatchEditor();
 }
 
-  function prepareMoreMatches() {
-    setSystemState((currentState) => {
-      const updatedState = fillPreparedMatchQueue(currentState);
-
-      const noMatchWasAdded =
-        updatedState.matchQueue.length === currentState.matchQueue.length;
-
-      if (noMatchWasAdded) {
-        return {
-          ...updatedState,
-          statusMessage:
-            "No additional match could be prepared. " +
-            "At least four unassigned waiting players are required.",
-        };
-      }
-
-      return {
-        ...updatedState,
-        statusMessage: "The prepared match queue was refilled.",
-      };
-    });
-  }
-
-  function resetPrototype() {
-    localStorage.removeItem(STORAGE_KEY);
-    setSystemState(createInitialState());
-  }
+async function resetPrototype() {
+  await commitSharedStateChange(
+    () => createInitialState(),
+  );
+}
 
   const inGamePlayerCount = getInGamePlayerCount(players);
 
@@ -549,10 +622,6 @@ function saveManualMatchChanges() {
               Player Pool
             </button>
           </nav>
-
-          <button type="button" onClick={prepareMoreMatches}>
-            Prepare Matches
-          </button>
 
           <button
             type="button"
