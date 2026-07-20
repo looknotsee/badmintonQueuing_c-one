@@ -1,4 +1,4 @@
-import "./PlayerPool.css";
+import "./playerPool.css";
 import PlayerPoolCard from "./PlayerPoolCard";
 
 function PlayerPoolModal({
