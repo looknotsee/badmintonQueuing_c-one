@@ -4,7 +4,7 @@ import Navbar from "./components/navbar/Navbar";
 import CourtSection from "./components/courtsection/Courtsection";
 import QueueSection from "./components/queuesection/Queuesection";
 import { formatSeconds } from "./components/utils/Formatseconds";
-import RegisterModal from "./components/registermodal/RegisterModal";
+import RegisterModal from "./components/registermodal/Registermodal";
 import PlayerPoolModal from "./components/playerpool/PlayerPoolModal";
 import { sampleCourts, samplePlayers } from "./data/sampleData";
 

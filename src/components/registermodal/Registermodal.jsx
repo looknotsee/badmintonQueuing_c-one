@@ -1,4 +1,4 @@
-import "./RegisterModal.css";
+import "./registerModal.css";
 
 function RegisterModal({
   isOpen,
