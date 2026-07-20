@@ -1,0 +1,57 @@
+.queue-section {
+    min-height: 42vh;
+    padding: 1.75rem 1.25rem;
+    background: var(--surface-sunk);
+    color: var(--ink-900);
+}
+
+.queue-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.queue-heading h2 {
+    margin: 0;
+    font-size: var(--text-xl);
+    font-family: var(--font-display);
+    line-height: 1;
+}
+
+.queue-heading p {
+    font-size: var(--text-xs);
+    color: var(--);
+    letter-spacing: 0.02em;
+    margin: 0.6rem 0 0;
+}
+
+.queue-summary {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.85rem 1.2rem;
+    font-size: var(--text-xs);
+    letter-spacing: 0.02em;
+}
+
+.queue-summary span {
+    white-space: nowrap;
+}
+
+.queue-summary strong {
+    margin-left: 0.25rem;
+}
+
+.queue-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.empty-queue {
+    padding: 1rem;
+    border: 2px dashed color-mix(in srgb, var(--surface) 70%, transparent);
+    border-radius: var(--radius-md);
+}

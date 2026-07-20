@@ -1,232 +1,65 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import Navbar from "./components/navbar/Navbar";
+import CourtSection from "./components/courtsection/Courtsection";
+import QueueSection from "./components/queuesection/Queuesection";
+import { formatSeconds } from "./components/utils/Formatseconds";
+import RegisterModal from "./components/registermodal/RegisterModal";
+import PlayerPoolModal from "./components/playerpool/PlayerPoolModal";
 import { sampleCourts, samplePlayers } from "./data/sampleData";
 
-const STORAGE_KEY = "badminton-central-loop-v1";
-const MAX_PREPARED_MATCHES = 4;
+import {
+createId,
+getMatchPlayerIds,
+fillPreparedMatchQueue
+} from "./logic/matchmaking.js";
 
-// Numerical values allow the matchmaking system to compare team strength.
-const skillValues = {
-  Unknown: 2,
-  Beginner: 1,
-  Intermediate: 2,
-  Expert: 3,
-};
+import {
+createInitialState,
+} from "./logic/queueState.js";
 
-function createId(prefix) {
-  const randomPart = Math.random().toString(16).slice(2);
+import {
+  moveQueuedMatchState,
+  reorderQueuedMatchState,
+} from "./logic/queueActions.js";
 
-  return `${prefix}-${Date.now()}-${randomPart}`;
-}
+import {
+  getInGamePlayerCount,
+  getPreparedPlayerCount,
+  getPlayerLocation
+} from "./logic/selectors.js";
 
-function getMatchPlayerIds(match) {
-  return [...match.teamOne, ...match.teamTwo];
-}
+import {
+  startMatchOnCourtState,
+  endMatchOnCourtState,
+  cancelMatchOnCourtState,
+} from "./logic/courtActions.js"
 
-function createPlayerMap(players) {
-  return new Map(players.map((player) => [player.id, player]));
-}
+import {
+  getPlayerRegistrationError,
+  registerPlayerState,
+  removePlayerState
+} from "./logic/playerActions.js";
 
-function countPreviousPartnerships(playerOneId, playerTwoId, completedMatches) {
-  return completedMatches.filter((match) => {
-    const partneredOnTeamOne =
-      match.teamOne.includes(playerOneId) &&
-      match.teamOne.includes(playerTwoId);
+import {
+  getManualMatchError,
+  updateManualMatchState,
+} from "./logic/matchSelectionValidation.js";
 
-    const partneredOnTeamTwo =
-      match.teamTwo.includes(playerOneId) &&
-      match.teamTwo.includes(playerTwoId);
-
-    return partneredOnTeamOne || partneredOnTeamTwo;
-  }).length;
-}
-
-function calculatePairingScore(teamOne, teamTwo, players, completedMatches) {
-  const playerMap = createPlayerMap(players);
-
-  const teamOneSkill = teamOne.reduce((total, playerId) => {
-    const player = playerMap.get(playerId);
-    return total + (skillValues[player?.skillLevel] ?? 2);
-  }, 0);
-
-  const teamTwoSkill = teamTwo.reduce((total, playerId) => {
-    const player = playerMap.get(playerId);
-    return total + (skillValues[player?.skillLevel] ?? 2);
-  }, 0);
-
-  const skillDifference = Math.abs(teamOneSkill - teamTwoSkill);
-
-  const repeatedPartnerCount =
-    countPreviousPartnerships(teamOne[0], teamOne[1], completedMatches) +
-    countPreviousPartnerships(teamTwo[0], teamTwo[1], completedMatches);
-
-  /*
-   * A large penalty is given to unequal team skill.
-   * Repeated partnerships are used as a secondary penalty.
-   * The lowest score is considered the best pairing.
-   */
-  return skillDifference * 100 + repeatedPartnerCount * 10;
-}
-
-function createBalancedMatch(selectedPlayerIds, players, completedMatches) {
-  const [playerA, playerB, playerC, playerD] = selectedPlayerIds;
-
-  // Four players have three possible doubles team arrangements.
-  const possiblePairings = [
-    {
-      teamOne: [playerA, playerB],
-      teamTwo: [playerC, playerD],
-    },
-    {
-      teamOne: [playerA, playerC],
-      teamTwo: [playerB, playerD],
-    },
-    {
-      teamOne: [playerA, playerD],
-      teamTwo: [playerB, playerC],
-    },
-  ];
-
-  const bestPairing = possiblePairings.reduce(
-    (currentBestPairing, pairingOption) => {
-      const currentBestScore = calculatePairingScore(
-        currentBestPairing.teamOne,
-        currentBestPairing.teamTwo,
-        players,
-        completedMatches,
-      );
-
-      const optionScore = calculatePairingScore(
-        pairingOption.teamOne,
-        pairingOption.teamTwo,
-        players,
-        completedMatches,
-      );
-
-      return optionScore < currentBestScore
-        ? pairingOption
-        : currentBestPairing;
-    },
-  );
-
-  return {
-    id: createId("match"),
-    teamOne: bestPairing.teamOne,
-    teamTwo: bestPairing.teamTwo,
-    createdAt: Date.now(),
-  };
-}
-
-function sortWaitingPlayers(waitingPlayerIds, players) {
-  const playerMap = createPlayerMap(players);
-
-  return [...waitingPlayerIds].sort((firstId, secondId) => {
-    const firstPlayer = playerMap.get(firstId);
-    const secondPlayer = playerMap.get(secondId);
-
-    if (!firstPlayer || !secondPlayer) {
-      return 0;
-    }
-
-    // Primary priority: players with the least total playing time.
-    if (firstPlayer.totalTimePlayed !== secondPlayer.totalTimePlayed) {
-      return firstPlayer.totalTimePlayed - secondPlayer.totalTimePlayed;
-    }
-
-    // Secondary priority: players with fewer completed games.
-    if (firstPlayer.gamesPlayed !== secondPlayer.gamesPlayed) {
-      return firstPlayer.gamesPlayed - secondPlayer.gamesPlayed;
-    }
-
-    // Final tie-breaker: the player who has waited the longest.
-    return firstPlayer.waitingSince - secondPlayer.waitingSince;
-  });
-}
-
-function fillPreparedMatchQueue(currentState) {
-  const updatedQueue = [...currentState.matchQueue];
-  let updatedWaitingPlayerIds = [...currentState.waitingPlayerIds];
-
-  /*
-   * Keep preparing matches until:
-   * - four matches are ready, or
-   * - fewer than four unassigned players remain.
-   */
-  while (
-    updatedQueue.length < MAX_PREPARED_MATCHES &&
-    updatedWaitingPlayerIds.length >= 4
-  ) {
-    const orderedWaitingPlayers = sortWaitingPlayers(
-      updatedWaitingPlayerIds,
-      currentState.players,
-    );
-
-    const selectedPlayerIds = orderedWaitingPlayers.slice(0, 4);
-
-    updatedWaitingPlayerIds = updatedWaitingPlayerIds.filter(
-      (playerId) => !selectedPlayerIds.includes(playerId),
-    );
-
-    const preparedMatch = createBalancedMatch(
-      selectedPlayerIds,
-      currentState.players,
-      currentState.completedMatches,
-    );
-
-    updatedQueue.push(preparedMatch);
-  }
-
-  return {
-    ...currentState,
-    waitingPlayerIds: updatedWaitingPlayerIds,
-    matchQueue: updatedQueue,
-  };
-}
-
-function createInitialState() {
-  const currentTime = Date.now();
-
-  const playersWithWaitingTimes = samplePlayers.map((player, index) => ({
-    ...player,
-    status: "queued",
-
-    /*
-     * Earlier players receive an older waiting time so the
-     * initial ordering is predictable.
-     */
-    waitingSince: currentTime - (samplePlayers.length - index) * 1000,
-  }));
-
-  const initialState = {
-    players: playersWithWaitingTimes,
-    courts: sampleCourts,
-    waitingPlayerIds: playersWithWaitingTimes.map((player) => player.id),
-    matchQueue: [],
-    activeMatches: [],
-    completedMatches: [],
-    statusMessage: "The first four matches have been prepared.",
-  };
-
-  return fillPreparedMatchQueue(initialState);
-}
-
-function loadInitialState() {
-  try {
-    const savedState = localStorage.getItem(STORAGE_KEY);
-
-    if (savedState) {
-      return JSON.parse(savedState);
-    }
-  } catch (error) {
-    console.error("Could not load the saved badminton state.", error);
-  }
-
-  return createInitialState();
-}
+import {
+  initializeQueueState,
+  updateQueueState,
+  subscribeToQueueState
+} from "./services/queueRepository.js";
 
 function App() {
-  const [systemState, setSystemState] = useState(loadInitialState);
+
+  const [systemState, setSystemState] = useState(
+  () => createInitialState(),
+  );
+
+  const queueVersionRef = useRef(null);
+  const systemStateRef = useRef(systemState);
 
   // This causes active court timers to update every second.
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -236,6 +69,32 @@ function App() {
   const [draggedMatchId, setDraggedMatchId] = useState(null);
   const [dragOverQueueIndex, setDragOverQueueIndex] = useState(null);
   const [dragOverCourtId, setDragOverCourtId] = useState(null);
+
+  // Simple page navigation without adding another dependency.
+  const [activePage, setActivePage] = useState("queue");
+
+  // Registration is now a modal rather than a page.
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [isPlayerpoolModalOpen, setIsPlayerpoolModalOpen] = useState(false);
+
+  // Player registration and player-pool controls.
+  const [registrationForm, setRegistrationForm] = useState({
+    name: "",
+    skillLevel: "Beginner",
+  });
+  const [playerSearch, setPlayerSearch] = useState("");
+  const [playerStatusFilter, setPlayerStatusFilter] = useState("all");
+
+  // Player removal
+  const [pendingRemovalPlayerId, setPendingRemovalPlayerId] = useState(null);
+
+  // Manual match editor state.
+  const [editingMatchId, setEditingMatchId] = useState(null);
+  const [manualTeams, setManualTeams] = useState({
+    teamOne: ["", ""],
+    teamTwo: ["", ""],
+  });
+  const [matchEditorError, setMatchEditorError] = useState("");
 
   const {
     players,
@@ -248,6 +107,10 @@ function App() {
   } = systemState;
 
   useEffect(() => {
+  systemStateRef.current = systemState;
+}, [systemState]);
+
+  useEffect(() => {
     const timerId = setInterval(() => {
       setCurrentTime(Date.now());
     }, 1000);
@@ -255,388 +118,173 @@ function App() {
     return () => clearInterval(timerId);
   }, []);
 
-  // Save the entire local prototype whenever its state changes.
   useEffect(() => {
+  let requestWasCancelled = false;
+  let unsubscribeFromQueueState = null;
+
+  async function loadSharedQueueState() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(systemState));
+      const initialState = createInitialState();
+
+      const queueRecord = await initializeQueueState(
+        initialState,
+      );
+
+      if (requestWasCancelled) {
+        return;
+      }
+
+      queueVersionRef.current = queueRecord.version;
+      systemStateRef.current = queueRecord.state;
+      setSystemState(queueRecord.state);
+
+      unsubscribeFromQueueState =
+        subscribeToQueueState((updatedRecord) => {
+          if (requestWasCancelled) {
+            return;
+          }
+
+          const currentVersion =
+            queueVersionRef.current ?? 0;
+
+          /*
+           * Ignore duplicate or older events.
+           * This also prevents our own completed update
+           * from being unnecessarily applied twice.
+           */
+          if (updatedRecord.version <= currentVersion) {
+            return;
+          }
+
+          queueVersionRef.current =
+            updatedRecord.version;
+
+          systemStateRef.current =
+            updatedRecord.state;
+
+          setSystemState(updatedRecord.state);
+        });
     } catch (error) {
-      console.error("Could not save the badminton state.", error);
+      if (requestWasCancelled) {
+        return;
+      }
+
+      console.error(
+        "Could not initialize the shared queue.",
+        error,
+      );
+
+      setSystemState((currentState) => ({
+        ...currentState,
+        statusMessage:
+          `Backend connection failed: ${error.message}`,
+      }));
     }
-  }, [systemState]);
-
-  function formatSeconds(totalSeconds) {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    if (hours > 0) {
-      return `${hours}:${String(minutes).padStart(
-        2,
-        "0",
-      )}:${String(seconds).padStart(2, "0")}`;
-    }
-
-    return `${minutes}:${String(seconds).padStart(2, "0")}`;
   }
 
-  function findPlayerById(playerId) {
-    return players.find((player) => player.id === playerId);
-  }
+  loadSharedQueueState();
 
-  function validateMatchStart(currentState, selectedCourt, selectedMatch) {
-    if (!selectedCourt) {
-      return "The selected court does not exist.";
+  return () => {
+    requestWasCancelled = true;
+
+    if (unsubscribeFromQueueState) {
+      unsubscribeFromQueueState();
     }
+  };
+}, []);
 
-    if (selectedCourt.status !== "available") {
-      return `${selectedCourt.name} is already occupied.`;
-    }
 
-    if (!selectedMatch) {
-      return "The selected queued match does not exist.";
-    }
+  async function commitSharedStateChange(stateTransition) {
+  const currentVersion = queueVersionRef.current;
 
-    const selectedPlayerIds = getMatchPlayerIds(selectedMatch);
-
-    const playerMap = createPlayerMap(currentState.players);
-
-    const activePlayerIds = new Set(
-      currentState.activeMatches.flatMap(getMatchPlayerIds),
+  if (currentVersion === null) {
+    console.error(
+      "The shared queue has not finished loading yet.",
     );
-
-    const allPlayersExist = selectedPlayerIds.every((playerId) =>
-      playerMap.has(playerId),
-    );
-
-    if (!allPlayersExist) {
-      return "One or more players in this match no longer exist.";
-    }
-
-    const allPlayersAreQueued = selectedPlayerIds.every(
-      (playerId) => playerMap.get(playerId)?.status === "queued",
-    );
-
-    if (!allPlayersAreQueued) {
-      return "One or more players are not currently queued.";
-    }
-
-    const playerAlreadyInGame = selectedPlayerIds.some((playerId) =>
-      activePlayerIds.has(playerId),
-    );
-
-    if (playerAlreadyInGame) {
-      return "One or more players are already in another active match.";
-    }
 
     return null;
   }
 
-  function startMatchOnCourt(courtId, requestedMatchId = null) {
-    setSystemState((currentState) => {
-      const selectedCourt = currentState.courts.find(
-        (court) => court.id === courtId,
-      );
+  try {
+    const currentState = systemStateRef.current;
+    const nextState = stateTransition(currentState);
 
-      /*
-       * Without a requested ID, the first prepared match
-       * is used.
-       */
-      const selectedMatchId =
-        requestedMatchId ?? currentState.matchQueue[0]?.id;
+    const updatedRecord = await updateQueueState(
+      nextState,
+      currentVersion,
+    );
 
-      const selectedMatch = currentState.matchQueue.find(
-        (match) => match.id === selectedMatchId,
-      );
+    queueVersionRef.current = updatedRecord.version;
+    systemStateRef.current = updatedRecord.state;
+    setSystemState(updatedRecord.state);
+    
+    return updatedRecord;
+  } catch (error) {
+    console.error(
+      "Could not save the shared queue change.",
+      error,
+    );
 
-      const validationMessage = validateMatchStart(
+    setSystemState((currentState) => ({
+      ...currentState,
+      statusMessage: error.message,
+    }));
+
+    return null;
+  }
+}
+async function startMatchOnCourt(
+  courtId,
+  requestedMatchId = null,
+) {
+  await commitSharedStateChange(
+    (currentState) =>
+      startMatchOnCourtState(
         currentState,
-        selectedCourt,
-        selectedMatch,
-      );
-
-      if (validationMessage) {
-        return {
-          ...currentState,
-          statusMessage: validationMessage,
-        };
-      }
-
-      const startedAt = Date.now();
-      const selectedPlayerIds = getMatchPlayerIds(selectedMatch);
-
-      const stateAfterStarting = {
-        ...currentState,
-
-        courts: currentState.courts.map((court) =>
-          court.id === courtId
-            ? {
-                ...court,
-                status: "occupied",
-                currentMatchId: selectedMatch.id,
-              }
-            : court,
-        ),
-
-        players: currentState.players.map((player) =>
-          selectedPlayerIds.includes(player.id)
-            ? {
-                ...player,
-                status: "inGame",
-              }
-            : player,
-        ),
-
-        matchQueue: currentState.matchQueue.filter(
-          (match) => match.id !== selectedMatch.id,
-        ),
-
-        activeMatches: [
-          ...currentState.activeMatches,
-          {
-            ...selectedMatch,
-            courtId,
-            startedAt,
-          },
-        ],
-
-        statusMessage: `${selectedCourt.name} started a match.`,
-      };
-
-      /*
-       * Starting a match opens a queue slot, so the system
-       * tries to prepare another match automatically.
-       */
-      return fillPreparedMatchQueue(stateAfterStarting);
-    });
-  }
-
-  function endMatchOnCourt(courtId) {
-    setSystemState((currentState) => {
-      const selectedCourt = currentState.courts.find(
-        (court) => court.id === courtId,
-      );
-
-      const activeMatch = currentState.activeMatches.find(
-        (match) => match.id === selectedCourt?.currentMatchId,
-      );
-
-      if (!selectedCourt || !activeMatch) {
-        return {
-          ...currentState,
-          statusMessage: "No active match was found on that court.",
-        };
-      }
-
-      const endedAt = Date.now();
-
-      const matchDuration = Math.max(
-        1,
-        Math.floor((endedAt - activeMatch.startedAt) / 1000),
-      );
-
-      const matchPlayerIds = getMatchPlayerIds(activeMatch);
-
-      const completedMatch = {
-        id: createId("completed"),
-        sourceMatchId: activeMatch.id,
         courtId,
-        teamOne: activeMatch.teamOne,
-        teamTwo: activeMatch.teamTwo,
-        startedAt: activeMatch.startedAt,
-        endedAt,
-        durationSeconds: matchDuration,
-      };
+        requestedMatchId,
+      ),
+  );
+}
 
-      const stateAfterEnding = {
-        ...currentState,
+async function endMatchOnCourt(courtId) {
+  await commitSharedStateChange(
+    (currentState) =>
+      endMatchOnCourtState(currentState, courtId),
+  );
+}
 
-        players: currentState.players.map((player) =>
-          matchPlayerIds.includes(player.id)
-            ? {
-                ...player,
-                status: "queued",
-                gamesPlayed: player.gamesPlayed + 1,
-                totalTimePlayed: player.totalTimePlayed + matchDuration,
-                waitingSince: endedAt,
-              }
-            : player,
-        ),
+async function cancelMatchOnCourt(courtId) {
+  await commitSharedStateChange(
+    (currentState) =>
+      cancelMatchOnCourtState(currentState, courtId),
+  );
+}
 
-        courts: currentState.courts.map((court) =>
-          court.id === courtId
-            ? {
-                ...court,
-                status: "available",
-                currentMatchId: null,
-              }
-            : court,
-        ),
+async function moveQueuedMatch(matchId, direction) {
+  await commitSharedStateChange(
+    (currentState) =>
+      moveQueuedMatchState(
+        currentState,
+        matchId,
+        direction,
+      ),
+  );
+}
 
-        /*
-         * Players return individually to the waiting pool.
-         * Their previous teams are not preserved.
-         */
-        waitingPlayerIds: [
-          ...currentState.waitingPlayerIds,
-          ...matchPlayerIds.filter(
-            (playerId) => !currentState.waitingPlayerIds.includes(playerId),
-          ),
-        ],
-
-        activeMatches: currentState.activeMatches.filter(
-          (match) => match.id !== activeMatch.id,
-        ),
-
-        completedMatches: [...currentState.completedMatches, completedMatch],
-
-        statusMessage:
-          `${selectedCourt.name} ended the match after ` +
-          `${formatSeconds(matchDuration)}. ` +
-          "The players returned to the waiting pool.",
-      };
-
-      return fillPreparedMatchQueue(stateAfterEnding);
-    });
-  }
-
-  function cancelMatchOnCourt(courtId) {
-    setSystemState((currentState) => {
-      const selectedCourt = currentState.courts.find(
-        (court) => court.id === courtId,
-      );
-
-      const activeMatch = currentState.activeMatches.find(
-        (match) => match.id === selectedCourt?.currentMatchId,
-      );
-
-      if (!selectedCourt || !activeMatch) {
-        return {
-          ...currentState,
-          statusMessage: "No active match was found to cancel.",
-        };
-      }
-
-      const cancelledAt = Date.now();
-
-      const matchPlayerIds = getMatchPlayerIds(activeMatch);
-
-      const stateAfterCancellation = {
-        ...currentState,
-
-        players: currentState.players.map((player) =>
-          matchPlayerIds.includes(player.id)
-            ? {
-                ...player,
-                status: "queued",
-                waitingSince: cancelledAt,
-              }
-            : player,
-        ),
-
-        courts: currentState.courts.map((court) =>
-          court.id === courtId
-            ? {
-                ...court,
-                status: "available",
-                currentMatchId: null,
-              }
-            : court,
-        ),
-
-        waitingPlayerIds: [
-          ...currentState.waitingPlayerIds,
-          ...matchPlayerIds.filter(
-            (playerId) => !currentState.waitingPlayerIds.includes(playerId),
-          ),
-        ],
-
-        activeMatches: currentState.activeMatches.filter(
-          (match) => match.id !== activeMatch.id,
-        ),
-
-        statusMessage:
-          `${selectedCourt.name}'s match was cancelled. ` +
-          "No game or playing time was recorded.",
-      };
-
-      return fillPreparedMatchQueue(stateAfterCancellation);
-    });
-  }
-
-  function moveQueuedMatch(matchId, direction) {
-    setSystemState((currentState) => {
-      const currentIndex = currentState.matchQueue.findIndex(
-        (match) => match.id === matchId,
-      );
-
-      const destinationIndex = currentIndex + direction;
-
-      if (
-        currentIndex === -1 ||
-        destinationIndex < 0 ||
-        destinationIndex >= currentState.matchQueue.length
-      ) {
-        return currentState;
-      }
-
-      const reorderedQueue = [...currentState.matchQueue];
-
-      const [movedMatch] = reorderedQueue.splice(currentIndex, 1);
-
-      reorderedQueue.splice(destinationIndex, 0, movedMatch);
-
-      return {
-        ...currentState,
-        matchQueue: reorderedQueue,
-        statusMessage: "The prepared match order was updated.",
-      };
-    });
-  }
-
-  function reorderQueuedMatchToIndex(matchId, destinationIndex) {
-    setSystemState((currentState) => {
-      const currentIndex = currentState.matchQueue.findIndex(
-        (match) => match.id === matchId,
-      );
-
-      if (currentIndex === -1) {
-        return currentState;
-      }
-
-      const reorderedQueue = [...currentState.matchQueue];
-      const [movedMatch] = reorderedQueue.splice(currentIndex, 1);
-
-      /*
-       * Removing the match may shift everything after it back
-       * by one slot, so the requested destination is adjusted
-       * to land in the spot the user actually dropped on.
-       */
-      let adjustedDestination =
-        currentIndex < destinationIndex
-          ? destinationIndex - 1
-          : destinationIndex;
-
-      adjustedDestination = Math.max(
-        0,
-        Math.min(adjustedDestination, reorderedQueue.length),
-      );
-
-      reorderedQueue.splice(adjustedDestination, 0, movedMatch);
-
-      if (
-        adjustedDestination === currentIndex &&
-        destinationIndex === currentIndex
-      ) {
-        return currentState;
-      }
-
-      return {
-        ...currentState,
-        matchQueue: reorderedQueue,
-        statusMessage: "The prepared match order was updated by drag and drop.",
-      };
-    });
-  }
+async function reorderQueuedMatchToIndex(
+  matchId,
+  destinationIndex,
+) {
+  await commitSharedStateChange(
+    (currentState) =>
+      reorderQueuedMatchState(
+        currentState,
+        matchId,
+        destinationIndex,
+      ),
+  );
+}
 
   function handleQueueDragStart(event, matchId) {
     setDraggedMatchId(matchId);
@@ -708,136 +356,242 @@ function App() {
     setDragOverCourtId(null);
   }
 
-  function rebuildQueuedMatch(matchId) {
-    setSystemState((currentState) => {
-      const matchToRebuild = currentState.matchQueue.find(
-        (match) => match.id === matchId,
-      );
+  async function registerPlayer(event) {
+  event.preventDefault();
 
-      if (!matchToRebuild) {
-        return currentState;
-      }
+  const currentPlayers =
+    systemStateRef.current.players;
 
-      const returnedPlayerIds = getMatchPlayerIds(matchToRebuild);
+  const registrationError = getPlayerRegistrationError(
+    currentPlayers,
+    registrationForm.name,
+  );
 
-      const returnedAt = Date.now();
+  if (registrationError) {
+    setSystemState((currentState) => ({
+      ...currentState,
+      statusMessage: registrationError,
+    }));
 
-      const stateWithoutMatch = {
-        ...currentState,
-
-        matchQueue: currentState.matchQueue.filter(
-          (match) => match.id !== matchId,
-        ),
-
-        waitingPlayerIds: [
-          ...currentState.waitingPlayerIds,
-          ...returnedPlayerIds.filter(
-            (playerId) => !currentState.waitingPlayerIds.includes(playerId),
-          ),
-        ],
-
-        players: currentState.players.map((player) =>
-          returnedPlayerIds.includes(player.id)
-            ? {
-                ...player,
-                status: "queued",
-                waitingSince: returnedAt,
-              }
-            : player,
-        ),
-
-        statusMessage: "The prepared match was dissolved and rebuilt.",
-      };
-
-      return fillPreparedMatchQueue(stateWithoutMatch);
-    });
+    return;
   }
 
-  function prepareMoreMatches() {
-    setSystemState((currentState) => {
-      const updatedState = fillPreparedMatchQueue(currentState);
+  const updatedRecord = await commitSharedStateChange(
+    (currentState) =>
+      registerPlayerState(
+        currentState,
+        registrationForm,
+      ),
+  );
 
-      const noMatchWasAdded =
-        updatedState.matchQueue.length === currentState.matchQueue.length;
-
-      if (noMatchWasAdded) {
-        return {
-          ...updatedState,
-          statusMessage:
-            "No additional match could be prepared. " +
-            "At least four unassigned waiting players are required.",
-        };
-      }
-
-      return {
-        ...updatedState,
-        statusMessage: "The prepared match queue was refilled.",
-      };
-    });
+  if (!updatedRecord) {
+    return;
   }
 
-  function resetPrototype() {
-    localStorage.removeItem(STORAGE_KEY);
-    setSystemState(createInitialState());
+  setRegistrationForm({
+    name: "",
+    skillLevel: "Beginner",
+  });
+}
+
+  function requestPlayerRemoval(playerId) {
+  setPendingRemovalPlayerId(playerId);
   }
 
-  function renderPlayerRow(playerId) {
-    const player = findPlayerById(playerId);
+  function cancelPlayerRemoval() {
+    setPendingRemovalPlayerId(null);
+  }
 
-    if (!player) {
-      return <div className="player-row">Unknown player</div>;
+  async function confirmPlayerRemoval(playerId) {
+  const updatedRecord = await commitSharedStateChange(
+    (currentState) =>
+      removePlayerState(currentState, playerId),
+  );
+
+  if (!updatedRecord) {
+    return;
+  }
+
+  setPendingRemovalPlayerId(null);
+}
+
+  function closePlayerPoolModal() {
+    setIsPlayerpoolModalOpen(false);
+    setPendingRemovalPlayerId(null);
+  }
+
+  function openManualMatchEditor(matchId) {
+    const matchToEdit = matchQueue.find((match) => match.id === matchId);
+
+    if (!matchToEdit) {
+      return;
     }
 
+    setEditingMatchId(matchId);
+    setManualTeams({
+      teamOne: [...matchToEdit.teamOne],
+      teamTwo: [...matchToEdit.teamTwo],
+    });
+    setMatchEditorError("");
+  }
+
+  function closeManualMatchEditor() {
+    setEditingMatchId(null);
+    setManualTeams({
+      teamOne: ["", ""],
+      teamTwo: ["", ""],
+    });
+    setMatchEditorError("");
+  }
+
+  function updateManualTeamPlayer(teamName, playerIndex, playerId) {
+    setManualTeams((currentTeams) => ({
+      ...currentTeams,
+      [teamName]: currentTeams[teamName].map((currentPlayerId, index) =>
+        index === playerIndex ? playerId : currentPlayerId,
+      ),
+    }));
+    setMatchEditorError("");
+  }
+
+  async function saveManualMatchChanges() {
+  const currentState = systemStateRef.current;
+
+  const validationError = getManualMatchError(
+    currentState,
+    editingMatchId,
+    manualTeams,
+  );
+
+  if (validationError) {
+    setMatchEditorError(validationError);
+    return;
+  }
+
+  const updatedRecord = await commitSharedStateChange(
+    (latestState) =>
+      updateManualMatchState(
+        latestState,
+        editingMatchId,
+        manualTeams,
+      ),
+  );
+
+  if (!updatedRecord) {
+    return;
+  }
+
+  closeManualMatchEditor();
+}
+
+async function resetPrototype() {
+  await commitSharedStateChange(
+    () => createInitialState(),
+  );
+}
+
+  const inGamePlayerCount = getInGamePlayerCount(players);
+
+  const preparedPlayerCount = getPreparedPlayerCount(matchQueue);
+
+  function findPlayerLocation(playerId) {
+    return getPlayerLocation(
+      playerId,
+      courts,
+      activeMatches,
+      matchQueue,
+      waitingPlayerIds
+    );
+  }
+
+  const filteredPlayers = players
+    .filter((player) =>
+      player.name.toLowerCase().includes(playerSearch.trim().toLowerCase()),
+    )
+    .filter(
+      (player) =>
+        playerStatusFilter === "all" ||
+        player.status === playerStatusFilter,
+    )
+    .sort((firstPlayer, secondPlayer) =>
+      firstPlayer.name.localeCompare(secondPlayer.name),
+    );
+
+  const editingMatch = matchQueue.find(
+    (match) => match.id === editingMatchId,
+  );
+
+  const editingMatchPlayerIds = editingMatch
+    ? getMatchPlayerIds(editingMatch)
+    : [];
+
+  const manualEditorPlayerIds = [
+    ...new Set([...waitingPlayerIds, ...editingMatchPlayerIds]),
+  ];
+
+  const manualEditorPlayers = manualEditorPlayerIds
+    .map((playerId) => players.find((player) => player.id === playerId))
+    .filter(Boolean)
+    .sort((firstPlayer, secondPlayer) =>
+      firstPlayer.name.localeCompare(secondPlayer.name),
+    );
+
+  const selectedManualPlayerIds = [
+    ...manualTeams.teamOne,
+    ...manualTeams.teamTwo,
+  ].filter(Boolean);
+
+  function renderManualPlayerSelect(teamName, playerIndex, label) {
+    const currentPlayerId = manualTeams[teamName][playerIndex];
+
     return (
-      <div className="player-row" key={player.id}>
-        <div className="player-main-info">
-          <strong>{player.name}</strong>
+      <div className="match-editor-slot">
+        <label htmlFor={`${teamName}-${playerIndex}`}>{label}</label>
 
-          <span className={`skill-badge ${player.skillLevel.toLowerCase()}`}>
-            {player.skillLevel}
-          </span>
-        </div>
+        <div className="match-editor-slot-controls">
+          <select
+            id={`${teamName}-${playerIndex}`}
+            value={currentPlayerId}
+            onChange={(event) =>
+              updateManualTeamPlayer(
+                teamName,
+                playerIndex,
+                event.target.value,
+              )
+            }
+          >
+            <option value="">Select player</option>
 
-        <div className="player-stats">
-          <span>
-            {player.gamesPlayed} {player.gamesPlayed === 1 ? "game" : "games"}
-          </span>
+            {manualEditorPlayers.map((player) => {
+              const selectedInAnotherSlot =
+                selectedManualPlayerIds.includes(player.id) &&
+                currentPlayerId !== player.id;
 
-          <span>{formatSeconds(player.totalTimePlayed)} total</span>
+              return (
+                <option
+                  key={player.id}
+                  value={player.id}
+                  disabled={selectedInAnotherSlot}
+                >
+                  {player.name} — {player.skillLevel} —{" "}
+                  {formatSeconds(player.totalTimePlayed)}
+                </option>
+              );
+            })}
+          </select>
+
+          <button
+            type="button"
+            className="remove-slot-button"
+            onClick={() => updateManualTeamPlayer(teamName, playerIndex, "")}
+            disabled={!currentPlayerId}
+          >
+            Remove
+          </button>
         </div>
       </div>
     );
   }
-
-  function renderTeam(playerIds) {
-    return (
-      <div className="team-box">
-        {playerIds.map((playerId) => renderPlayerRow(playerId))}
-      </div>
-    );
-  }
-
-  function renderMatch(match) {
-    return (
-      <>
-        {renderTeam(match.teamOne)}
-        {renderTeam(match.teamTwo)}
-      </>
-    );
-  }
-
-  const inGamePlayerCount = players.filter(
-    (player) => player.status === "inGame",
-  ).length;
-
-  const preparedPlayerCount = matchQueue.reduce(
-    (total, match) => total + getMatchPlayerIds(match).length,
-    0,
-  );
-
-  const availableCourts = courts.filter(
-    (court) => court.status === "available",
-  );
 
   return (
     <main className="app-shell">
@@ -845,9 +599,29 @@ function App() {
         <Navbar />
 
         <div className="top-actions">
-          <button type="button" onClick={prepareMoreMatches}>
-            Prepare Matches
-          </button>
+          <nav className="view-navigation" aria-label="App pages">
+            <button
+              type="button"
+              className={activePage === "queue" ? "secondary-button" : ""}
+              onClick={() => setActivePage("queue")}
+            >
+              Queue
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsRegisterModalOpen(true)}
+            >
+              Register Player
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsPlayerpoolModalOpen(true)}
+            >
+              Player Pool
+            </button>
+          </nav>
 
           <button
             type="button"
@@ -859,199 +633,145 @@ function App() {
         </div>
       </header>
 
-      <section className="courts-section" aria-labelledby="courts-title">
-        <h1 id="courts-title" className="visually-hidden">
-          Courts
-        </h1>
+      {activePage === "queue" && (
+        <>
+          <CourtSection
+            courts={courts}
+            activeMatches={activeMatches}
+            players={players}
+            currentTime={currentTime}
+            draggedMatchId={draggedMatchId}
+            dragOverCourtId={dragOverCourtId}
+            matchQueueLength={matchQueue.length}
+            onCourtDragOver={handleCourtDragOver}
+            onCourtDragLeave={handleCourtDragLeave}
+            onCourtDrop={handleCourtDrop}
+            onStartMatch={startMatchOnCourt}
+            onEndMatch={endMatchOnCourt}
+            onCancelMatch={cancelMatchOnCourt}
+          />
 
-        <div className="court-grid">
-          {courts.map((court) => {
-            const activeMatch = activeMatches.find(
-              (match) => match.id === court.currentMatchId,
-            );
+          <QueueSection
+            matchQueue={matchQueue}
+            players={players}
+            statusMessage={statusMessage}
+            totalPlayers={players.length}
+            waitingPlayerCount={waitingPlayerIds.length}
+            preparedPlayerCount={preparedPlayerCount}
+            inGamePlayerCount={inGamePlayerCount}
+            completedMatchCount={completedMatches.length}
+            draggedMatchId={draggedMatchId}
+            dragOverQueueIndex={dragOverQueueIndex}
+            onQueueDragStart={handleQueueDragStart}
+            onQueueDragEnd={handleQueueDragEnd}
+            onQueueCardDragOver={handleQueueCardDragOver}
+            onQueueCardDrop={handleQueueCardDrop}
+            onMoveMatch={moveQueuedMatch}
+            onOpenEditor={openManualMatchEditor}
+          />
+        </>
+      )}
 
-            const elapsedSeconds = activeMatch
-              ? Math.max(
-                  0,
-                  Math.floor((currentTime - activeMatch.startedAt) / 1000),
-                )
-              : 0;
+      <RegisterModal
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        registrationForm={registrationForm}
+        setRegistrationForm={setRegistrationForm}
+        registerPlayer={registerPlayer}
+        statusMessage={statusMessage}
+/>
 
-            const isDropTarget =
-              !activeMatch &&
-              court.status === "available" &&
-              dragOverCourtId === court.id;
+      <PlayerPoolModal
+        isOpen={isPlayerpoolModalOpen}
+        onClose={closePlayerPoolModal}
+        filteredPlayers={filteredPlayers}
+        playerSearch={playerSearch}
+        setPlayerSearch={setPlayerSearch}
+        playerStatusFilter={playerStatusFilter}
+        setPlayerStatusFilter={setPlayerStatusFilter}
+        pendingRemovalPlayerId={pendingRemovalPlayerId}
+        requestPlayerRemoval={requestPlayerRemoval}
+        cancelPlayerRemoval={cancelPlayerRemoval}
+        confirmPlayerRemoval={confirmPlayerRemoval}
+        findPlayerLocation={findPlayerLocation}
+      />
 
-            return (
-              <article
-                className={`court-card ${
-                  isDropTarget ? "court-drop-target" : ""
-                }`}
-                key={court.id}
-                onDragOver={(event) => handleCourtDragOver(event, court)}
-                onDragLeave={() => handleCourtDragLeave(court)}
-                onDrop={(event) => handleCourtDrop(event, court)}
+      {editingMatch && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeManualMatchEditor();
+            }
+          }}
+        >
+          <section
+            className="modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="match-editor-title"
+          >
+            <div className="match-editor-heading">
+              <div>
+                <p className="management-kicker">Manual queue control</p>
+                <h2 id="match-editor-title">Rebuild queued match</h2>
+                <p>
+                  Choose four unique players from this match or from the
+                  unassigned waiting pool.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="match-editor-close"
+                onClick={closeManualMatchEditor}
+                aria-label="Close match editor"
               >
-                <h2>{court.name}</h2>
+                ×
+              </button>
+            </div>
 
-                <div className="court-content">
-                  {activeMatch ? (
-                    renderMatch(activeMatch)
-                  ) : (
-                    <div className="empty-court">
-                      <strong>Available</strong>
-                      <span>
-                        {draggedMatchId
-                          ? "Drop here to start this match."
-                          : "The next prepared match can start here."}
-                      </span>
-                    </div>
-                  )}
-                </div>
+            <div className="manual-team-grid">
+              <div className="manual-team-card">
+                <h3>Team One</h3>
+                {renderManualPlayerSelect("teamOne", 0, "Player 1")}
+                {renderManualPlayerSelect("teamOne", 1, "Player 2")}
+              </div>
 
-                <div className="court-footer">
-                  {activeMatch ? (
-                    <>
-                      <div className="court-action-row">
-                        <div className="court-timer">
-                          {formatSeconds(elapsedSeconds)}
-                        </div>
+              <div className="manual-team-card">
+                <h3>Team Two</h3>
+                {renderManualPlayerSelect("teamTwo", 0, "Player 1")}
+                {renderManualPlayerSelect("teamTwo", 1, "Player 2")}
+              </div>
+            </div>
 
-                        <button
-                          type="button"
-                          className="danger-button"
-                          onClick={() => endMatchOnCourt(court.id)}
-                        >
-                          End Match
-                        </button>
+            {matchEditorError && (
+              <div className="match-editor-error" role="alert">
+                {matchEditorError}
+              </div>
+            )}
 
-                        <button
-                          type="button"
-                          className="secondary-button"
-                          onClick={() => cancelMatchOnCourt(court.id)}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className="court-start-button"
-                      onClick={() => startMatchOnCourt(court.id)}
-                      disabled={matchQueue.length === 0}
-                    >
-                      Start Next Match
-                    </button>
-                  )}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="queue-section" aria-labelledby="queue-title">
-        <div className="queue-heading">
-          <div>
-            <h2 id="queue-title">Match Queue</h2>
-            <p>{statusMessage}</p>
-          </div>
-
-          <div className="queue-summary">
-            <span>
-              Total <strong>{players.length}</strong>
-            </span>
-
-            <span>
-              Waiting pool <strong>{waitingPlayerIds.length}</strong>
-            </span>
-
-            <span>
-              Prepared <strong>{preparedPlayerCount}</strong>
-            </span>
-
-            <span>
-              In game <strong>{inGamePlayerCount}</strong>
-            </span>
-
-            <span>
-              Completed <strong>{completedMatches.length}</strong>
-            </span>
-          </div>
-        </div>
-
-        {matchQueue.length === 0 ? (
-          <div className="empty-queue">
-            No match is prepared. At least four waiting players are required.
-          </div>
-        ) : (
-          <div className="queue-grid">
-            {matchQueue.slice(0, MAX_PREPARED_MATCHES).map((match, index) => (
-              <article
-                className={`queue-card ${
-                  index === 0 ? "next-match-card" : ""
-                } ${draggedMatchId === match.id ? "queue-card-dragging" : ""} ${
-                  dragOverQueueIndex === index &&
-                  draggedMatchId &&
-                  draggedMatchId !== match.id
-                    ? "queue-card-drag-over"
-                    : ""
-                }`}
-                key={match.id}
-                draggable
-                onDragStart={(event) => handleQueueDragStart(event, match.id)}
-                onDragEnd={handleQueueDragEnd}
-                onDragOver={(event) => handleQueueCardDragOver(event, index)}
-                onDrop={(event) => handleQueueCardDrop(event, index)}
+            <div className="match-editor-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={closeManualMatchEditor}
               >
-                <header className="queue-card-header">
-                  <strong>
-                    <span className="drag-handle" aria-hidden="true">
-                      ⠿
-                    </span>{" "}
-                    {index === 0 ? "Next Match" : `Queue ${index + 1}`}
-                  </strong>
+                Cancel
+              </button>
 
-                  <span>{match.id.split("-").slice(0, 2).join("-")}</span>
-                </header>
-
-                {renderMatch(match)}
-
-                <div className="queue-controls">
-                  <div className="queue-control-buttons">
-                    <button
-                      type="button"
-                      className="move-up-button"
-                      onClick={() => moveQueuedMatch(match.id, -1)}
-                      disabled={index === 0}
-                    >
-                      Move Up
-                    </button>
-
-                    <button
-                      type="button"
-                      className="move-down-button"
-                      onClick={() => moveQueuedMatch(match.id, 1)}
-                      disabled={index === matchQueue.length - 1}
-                    >
-                      Move Down
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="rebuild-button"
-                    onClick={() => rebuildQueuedMatch(match.id)}
-                  >
-                    Rebuild
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+              <button
+                type="button"
+                className="primary-management-button"
+                onClick={saveManualMatchChanges}
+              >
+                Save Match
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   );
 }
