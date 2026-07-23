@@ -18,7 +18,8 @@ function PlayerRow({ player }) {
 
       <div className="player-stats">
         <span>
-          {player.gamesPlayed} {player.gamesPlayed === 1 ? "game" : "games"}
+          {player.gamesPlayed}{" "}
+          {player.gamesPlayed === 1 ? "game" : "games"}
         </span>
 
         <span>{formatSeconds(player.totalTimePlayed)} total</span>
