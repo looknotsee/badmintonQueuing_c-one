@@ -180,8 +180,12 @@
 
 .player-pool-stat-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.65rem;
+}
+
+.player-pool-stat.payment-due strong {
+    font-weight: 800;
 }
 
 .player-pool-stat {

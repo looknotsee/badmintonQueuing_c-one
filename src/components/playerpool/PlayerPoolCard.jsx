@@ -1,6 +1,8 @@
 import { formatSeconds } from "../utils/Formatseconds";
 import "./playerPool.css";
 
+const GAME_FEE_PESOS = 15;
+
 function PlayerPoolCard({
   player,
   playerLocation,
@@ -14,6 +16,9 @@ function PlayerPoolCard({
 
   const playerCanBeRemoved =
     player.status !== "inGame";
+
+  const gamesPlayed = Number(player.gamesPlayed) || 0;
+  const amountDue = gamesPlayed * GAME_FEE_PESOS;
 
   return (
     <article
@@ -95,7 +100,7 @@ function PlayerPoolCard({
       <div className="player-pool-stat-grid">
         <div className="player-pool-stat">
           <span>Games</span>
-          <strong>{player.gamesPlayed}</strong>
+          <strong>{gamesPlayed}</strong>
         </div>
 
         <div className="player-pool-stat">
@@ -104,6 +109,14 @@ function PlayerPoolCard({
             {formatSeconds(player.totalTimePlayed)}
           </strong>
         </div>
+
+        <div className="player-pool-stat payment-due">
+        <span>Amount due</span>
+          <strong>
+            ₱{amountDue.toLocaleString("en-PH")}
+          </strong>
+        </div>
+        
       </div>
     </article>
   );
