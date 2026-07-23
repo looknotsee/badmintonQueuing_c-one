@@ -6,6 +6,7 @@ import QueueSection from "./components/queuesection/Queuesection";
 import { formatSeconds } from "./components/utils/Formatseconds";
 import RegisterModal from "./components/registermodal/Registermodal";
 import PlayerPoolModal from "./components/playerpool/PlayerPoolModal";
+import FlyingMatchCard from "./components/flyingmatchcard/Flyingmatchcard";
 import { sampleCourts, samplePlayers } from "./data/sampleData";
 
 import {
@@ -87,6 +88,9 @@ function App() {
 
   // Player removal
   const [pendingRemovalPlayerId, setPendingRemovalPlayerId] = useState(null);
+
+  // Visual guide: the match currently animating from the queue to a court.
+  const [flyingMatch, setFlyingMatch] = useState(null);
 
   // Manual match editor state.
   const [editingMatchId, setEditingMatchId] = useState(null);
@@ -237,6 +241,31 @@ async function startMatchOnCourt(
   courtId,
   requestedMatchId = null,
 ) {
+  const matchIdToStart = requestedMatchId ?? matchQueue[0]?.id;
+  const matchToStart = matchQueue.find(
+    (match) => match.id === matchIdToStart,
+  );
+
+  const queueCardElement = matchToStart
+    ? document.querySelector(
+        `[data-match-id="${matchToStart.id}"]`,
+      )
+    : null;
+
+  const courtCardElement = document.querySelector(
+    `[data-court-id="${courtId}"]`,
+  );
+
+  if (matchToStart && queueCardElement && courtCardElement) {
+    setFlyingMatch({
+      matchId: matchToStart.id,
+      teamOne: matchToStart.teamOne,
+      teamTwo: matchToStart.teamTwo,
+      startRect: queueCardElement.getBoundingClientRect(),
+      endRect: courtCardElement.getBoundingClientRect(),
+    });
+  }
+
   await commitSharedStateChange(
     (currentState) =>
       startMatchOnCourtState(
@@ -245,6 +274,10 @@ async function startMatchOnCourt(
         requestedMatchId,
       ),
   );
+}
+
+function clearFlyingMatch() {
+  setFlyingMatch(null);
 }
 
 async function endMatchOnCourt(courtId) {
@@ -654,6 +687,7 @@ async function resetPrototype() {
             completedMatchCount={completedMatches.length}
             draggedMatchId={draggedMatchId}
             dragOverQueueIndex={dragOverQueueIndex}
+            flyingMatchId={flyingMatch?.matchId ?? null}
             onQueueDragStart={handleQueueDragStart}
             onQueueDragEnd={handleQueueDragEnd}
             onQueueCardDragOver={handleQueueCardDragOver}
@@ -687,6 +721,15 @@ async function resetPrototype() {
         confirmPlayerRemoval={confirmPlayerRemoval}
         findPlayerLocation={findPlayerLocation}
       />
+
+      {flyingMatch && (
+        <FlyingMatchCard
+          key={flyingMatch.matchId}
+          flyingMatch={flyingMatch}
+          players={players}
+          onArrived={clearFlyingMatch}
+        />
+      )}
 
       {editingMatch && (
         <div

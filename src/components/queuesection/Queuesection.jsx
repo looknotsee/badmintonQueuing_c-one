@@ -14,6 +14,7 @@ function QueueSection({
   completedMatchCount,
   draggedMatchId,
   dragOverQueueIndex,
+  flyingMatchId,
   onQueueDragStart,
   onQueueDragEnd,
   onQueueCardDragOver,
@@ -63,6 +64,7 @@ function QueueSection({
               matchQueueLength={matchQueue.length}
               draggedMatchId={draggedMatchId}
               dragOverQueueIndex={dragOverQueueIndex}
+              isLaunching={match.id === flyingMatchId}
               onDragStart={onQueueDragStart}
               onDragEnd={onQueueDragEnd}
               onDragOver={onQueueCardDragOver}
