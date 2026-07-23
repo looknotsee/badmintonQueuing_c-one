@@ -57,8 +57,8 @@ export default function Navbar() {
           <FaHome /> Home
         </a>
 
-        <a className="navBtn" href="/players">
-          <FaUsers /> Players
+        <a className="navBtn" href="/session">
+          <FaUsers /> Session
         </a>
       </nav>
     </>

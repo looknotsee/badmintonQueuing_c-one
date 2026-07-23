@@ -2,7 +2,12 @@
     --black: #1c1c1c;
     --muted: #b0b0b0;
     --white: #e4e4e4;
-    --green: #187c15;
+    --green-800: #0e5636;
+    --green-700: #10603d;
+    --green-600: #157a4c;
+    --green-500: #1c8f5a;
+    --green-tint: #e4f3ea;
+    --green-tint-strong: #ccebd9;
     --text-size: clamp(13px, 1.5vw, 16px);
     --note-size: clamp(9px, 0.9vw, 11px);
     --header-size: clamp(22px, 3.5vw, 36px);
@@ -15,7 +20,7 @@
     margin: 0;
     padding: 0;
     display: flex;
-    background-color: white;
+    background-color: var(--surface);
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     border-radius: 10px;
     overflow: hidden;
@@ -36,7 +41,7 @@
     font-size: clamp(14px, 1.8vw, 17px);
     font-weight: 600;
     color: #fff;
-    background-color: var(--green);
+    background-color: var(--green-800);
     width: 100%;
     box-sizing: border-box;
     display: flex;
@@ -65,7 +70,7 @@
 .search {
     display: flex;
     align-items: center;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border);
     border-radius: 25px;
     padding: 10px 14px;
     gap: 10px;
@@ -86,6 +91,59 @@
     color: #999;
     font-size: 14px;
     flex-shrink: 0;
+}
+
+.search-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.search-results {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 6px;
+    position: absolute;
+    z-index: 5;
+    width: 100%;
+    box-sizing: border-box;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.search-result-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--black);
+    font-size: var(--text-size);
+    text-align: left;
+    cursor: pointer;
+}
+
+.search-result-item:hover {
+    background-color: #f3f5f3;
+}
+
+.search-result-skill {
+    font-size: var(--note-size);
+    color: #888;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.form-error {
+    margin: 0;
+    font-size: var(--note-size);
+    color: #b23a2f;
+    font-weight: 600;
 }
 
 /* ── Section Label ── */
@@ -140,10 +198,11 @@
 }
 
 .skill-btn {
+    color: var(--ink-500);
     padding: 7px 14px;
-    border: 1px solid #ccc;
+    border: 2px solid var(--border);
     border-radius: 8px;
-    background-color: #fff;
+    background-color: transparent;
     font-size: clamp(11px, 1.2vw, 13px);
     cursor: pointer;
     transition: border-color 0.2s, background-color 0.2s, color 0.2s;
@@ -163,7 +222,7 @@
 
 .skill-btn--Beginner.skill-btn--active {
     border-color: transparent;
-    background-color: var(--green);
+    background-color: var(--green-500);
     /* green */
 }
 
@@ -186,7 +245,7 @@
 }
 
 .skill-btn--Guest.skill-btn--active {
-   border-color: transparent;
+    border-color: transparent;
     background: #9e6809;
     /* orange */
 }
@@ -234,6 +293,17 @@
 
 .clear-btn:hover {
     border-color: #999;
+}
+
+.start-btn {
+    padding: 11px 20px;
+    background-color: var(--green-500);
+    color: var(--green-tint);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: var(--text-size);
+    cursor: pointer;
+    transition: border-color 0.2s;
 }
 
 /* ── Responsive ── */

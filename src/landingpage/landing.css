@@ -1,0 +1,96 @@
+/* ==========================================================================
+   Landing page — uses the shared design tokens defined in App.css's :root
+   (font-*, ink-*, surface, bg, radius-*, shadow-*, text-*). No local
+   overrides of body/background here; App.css already owns those globally.
+   ========================================================================== */
+
+.menuBtn {
+    display: flex;
+    color: var(--surface);
+    font-size: var(--text-lg);
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.menuBtn:hover {
+    opacity: 0.7;
+    transform: scale(1.1);
+}
+
+.container {
+    margin: 0;
+    padding: 55px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+}
+
+/* ==========================================================================
+   Left Panel (Hero/Info Section)
+   ========================================================================== */
+.leftPanel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+}
+
+.leftPanel img {
+    margin: 0;
+    padding: 0;
+    width: 200px;
+    height: auto;
+}
+
+.text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-align: center;
+}
+
+.heading {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    color: var(--ink-900);
+    font-weight: bold;
+    margin: 0;
+}
+
+.paragraph {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    color: var(--ink-500);
+    margin: 0;
+}
+
+.landing-error {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    color: #b23a2f;
+    background-color: #fff5f5;
+    border: 1px solid #fbd5d5;
+    border-radius: var(--radius-md, 8px);
+    padding: 8px 14px;
+    margin: 0;
+    text-align: center;
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+@media (max-width: 1024px) {
+    .container {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        margin: 0;
+        width: 100%;
+    }
+}
