@@ -19,7 +19,7 @@ function CourtSection({
   return (
     <section className="courts-section" aria-labelledby="courts-title">
       <h1 id="courts-title" className="visually-hidden">
-        Courts
+        The Courts
       </h1>
 
       <div className="court-grid">
