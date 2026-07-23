@@ -159,7 +159,9 @@ function Landing() {
 
   return (
     <div>
-      <Navbar />
+      <header className="top-bar">
+              <Navbar />
+    </header>
 
       <div className="container">
         <div className="leftPanel">

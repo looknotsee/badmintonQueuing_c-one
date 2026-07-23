@@ -149,7 +149,7 @@ export default function PlayerForm({ onAddPlayer, existingPlayers = [] }) {
           {/* Actions */}
           <div className="action-row">
             <button className="add-btn" type="button" onClick={handleAdd}>
-              <FaPlus /> Add to Queue
+              <FaPlus /> Add to List
             </button>
             <button className="clear-btn" type="button" onClick={handleClear}>
               Clear

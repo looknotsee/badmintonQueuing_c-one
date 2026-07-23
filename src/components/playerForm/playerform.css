@@ -265,7 +265,6 @@
     color: #fff;
     border: none;
     border-radius: 8px;
-    font-size: var(--text-size);
     font-weight: 600;
     cursor: pointer;
     display: flex;
@@ -281,7 +280,10 @@
 }
 
 .clear-btn {
-    padding: 11px 20px;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    padding: 0px 10px;
     background-color: #fff;
     color: var(--black);
     border: 1px solid #ccc;
@@ -296,7 +298,10 @@
 }
 
 .start-btn {
-    padding: 11px 20px;
+    flex: 2;
+    align-items: center;
+    justify-content: center;
+    padding: 0px 20px;
     background-color: var(--green-500);
     color: var(--green-tint);
     border: 1px solid var(--border);
