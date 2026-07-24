@@ -4,6 +4,7 @@ import "./landing.css";
 import Navbar from "../components/navbar/Navbar";
 import PlayerForm from "../components/playerForm/PlayerForm";
 import Playerlist from "../components/playerlist/Playerlist";
+import logo from "../assets/Logo.png";
 
 import { createInitialState } from "../logic/queueState.js";
 import {
@@ -165,7 +166,7 @@ function Landing() {
 
       <div className="container">
         <div className="leftPanel">
-          <img src="src/assets/logo.png" alt="Description" />
+          <img src={logo} alt="C-ONE Logo" />
           <div className="text">
             <div className="heading">Let's Start Playing!</div>
             <div className="paragraph">Add players and we'll do the rest.</div>
