@@ -100,6 +100,9 @@ function App() {
   });
   const [matchEditorError, setMatchEditorError] = useState("");
 
+  const [draggedManualPlayerId, setDraggedManualPlayerId] =
+  useState(null);
+
   const {
     players,
     courts,
@@ -474,6 +477,7 @@ async function reorderQueuedMatchToIndex(
       teamOne: ["", ""],
       teamTwo: ["", ""],
     });
+    setDraggedManualPlayerId(null);
     setMatchEditorError("");
   }
 
@@ -486,6 +490,91 @@ async function reorderQueuedMatchToIndex(
     }));
     setMatchEditorError("");
   }
+
+  function handleManualPlayerDragStart(event, playerId) {
+  setDraggedManualPlayerId(playerId);
+
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData(
+    "application/x-manual-player",
+    playerId,
+  );
+}
+
+function handleManualPlayerDragEnd() {
+  setDraggedManualPlayerId(null);
+}
+
+function handleManualSlotDragOver(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+}
+
+function handleManualSlotDrop(
+  event,
+  targetTeamName,
+  targetPlayerIndex,
+) {
+  event.preventDefault();
+
+  const droppedPlayerId =
+    draggedManualPlayerId ||
+    event.dataTransfer.getData(
+      "application/x-manual-player",
+    );
+
+  if (!droppedPlayerId) {
+    return;
+  }
+
+  setManualTeams((currentTeams) => {
+    const updatedTeams = {
+      teamOne: [...currentTeams.teamOne],
+      teamTwo: [...currentTeams.teamTwo],
+    };
+
+    const targetPlayerId =
+      updatedTeams[targetTeamName][targetPlayerIndex];
+
+    let sourceTeamName = null;
+    let sourcePlayerIndex = -1;
+
+    for (const teamName of ["teamOne", "teamTwo"]) {
+      const foundIndex =
+        updatedTeams[teamName].indexOf(droppedPlayerId);
+
+      if (foundIndex >= 0) {
+        sourceTeamName = teamName;
+        sourcePlayerIndex = foundIndex;
+        break;
+      }
+    }
+
+    /*
+     * If the dragged player already occupies another match slot,
+     * place the target player into the source slot. This creates
+     * a proper swap between teammates or opposing teams.
+     */
+    if (sourceTeamName !== null) {
+      updatedTeams[sourceTeamName][sourcePlayerIndex] =
+        targetPlayerId;
+    }
+
+    /*
+     * If the player came from the waiting pool, there is no source
+     * match slot. The displaced target player simply disappears
+     * from manualTeams and will return to the waiting pool when
+     * the changes are saved.
+     */
+    updatedTeams[targetTeamName][targetPlayerIndex] =
+      droppedPlayerId;
+
+    return updatedTeams;
+  });
+
+  setDraggedManualPlayerId(null);
+  setMatchEditorError("");
+}
 
   async function saveManualMatchChanges() {
   const currentState = systemStateRef.current;
@@ -574,57 +663,89 @@ async function resetPrototype() {
     ...manualTeams.teamTwo,
   ].filter(Boolean);
 
-  function renderManualPlayerSelect(teamName, playerIndex, label) {
-    const currentPlayerId = manualTeams[teamName][playerIndex];
+  function renderManualPlayerSlot(
+  teamName,
+  playerIndex,
+  label,
+) {
+  const playerId =
+    manualTeams[teamName][playerIndex];
 
-    return (
-      <div className="match-editor-slot">
-        <label htmlFor={`${teamName}-${playerIndex}`}>{label}</label>
+  const player = players.find(
+    (currentPlayer) => currentPlayer.id === playerId,
+  );
 
-        <div className="match-editor-slot-controls">
-          <select
-            id={`${teamName}-${playerIndex}`}
-            value={currentPlayerId}
-            onChange={(event) =>
-              updateManualTeamPlayer(
-                teamName,
-                playerIndex,
-                event.target.value,
+  return (
+    <div className="match-editor-slot">
+      <span className="match-editor-slot-label">
+        {label}
+      </span>
+
+      <div
+        className="manual-player-slot"
+        onDragOver={handleManualSlotDragOver}
+        onDrop={(event) =>
+          handleManualSlotDrop(
+            event,
+            teamName,
+            playerIndex,
+          )
+        }
+      >
+        {player ? (
+          <article
+            className={`manual-player-card ${
+              draggedManualPlayerId === player.id
+                ? "manual-player-card-dragging"
+                : ""
+            }`}
+            draggable
+            onDragStart={(event) =>
+              handleManualPlayerDragStart(
+                event,
+                player.id,
               )
             }
+            onDragEnd={handleManualPlayerDragEnd}
           >
-            <option value="">Select player</option>
+            <div className="manual-player-card-avatar">
+              {player.name
+                .split(" ")
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((namePart) => namePart[0])
+                .join("")
+                .toUpperCase()}
+            </div>
 
-            {manualEditorPlayers.map((player) => {
-              const selectedInAnotherSlot =
-                selectedManualPlayerIds.includes(player.id) &&
-                currentPlayerId !== player.id;
+            <div className="manual-player-card-details">
+              <strong>{player.name}</strong>
 
-              return (
-                <option
-                  key={player.id}
-                  value={player.id}
-                  disabled={selectedInAnotherSlot}
-                >
-                  {player.name} — {player.skillLevel} —{" "}
-                  {formatSeconds(player.totalTimePlayed)}
-                </option>
-              );
-            })}
-          </select>
+              <span>
+                {player.skillLevel} ·{" "}
+                {player.gamesPlayed} games ·{" "}
+                {formatSeconds(
+                  player.totalTimePlayed,
+                )}
+              </span>
+            </div>
 
-          <button
-            type="button"
-            className="remove-slot-button"
-            onClick={() => updateManualTeamPlayer(teamName, playerIndex, "")}
-            disabled={!currentPlayerId}
-          >
-            Remove
-          </button>
-        </div>
+            <span
+              className="manual-player-drag-handle"
+              aria-hidden="true"
+            >
+              ⠿
+            </span>
+          </article>
+        ) : (
+          <div className="manual-player-slot-empty">
+            Drop a player here
+          </div>
+        )}
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   return (
     <main className="app-shell">
@@ -770,14 +891,14 @@ async function resetPrototype() {
             <div className="manual-team-grid">
               <div className="manual-team-card">
                 <h3>Team One</h3>
-                {renderManualPlayerSelect("teamOne", 0, "Player 1")}
-                {renderManualPlayerSelect("teamOne", 1, "Player 2")}
+                {renderManualPlayerSlot("teamOne", 0, "Player 1")}
+                {renderManualPlayerSlot("teamOne", 1, "Player 2")}
               </div>
 
               <div className="manual-team-card">
                 <h3>Team Two</h3>
-                {renderManualPlayerSelect("teamTwo", 0, "Player 1")}
-                {renderManualPlayerSelect("teamTwo", 1, "Player 2")}
+                {renderManualPlayerSlot("teamTwo", 0, "Player 1")}
+                {renderManualPlayerSlot("teamTwo", 1, "Player 2")}
               </div>
             </div>
 
