@@ -129,8 +129,24 @@ export function sortWaitingPlayers(waitingPlayerIds, players) {
 }
 
 export function fillPreparedMatchQueue(currentState) {
-  const updatedQueue = [...currentState.matchQueue];
-  let updatedWaitingPlayerIds = [...currentState.waitingPlayerIds];
+const updatedQueue = [...currentState.matchQueue];
+
+const existingPlayerIds = new Set(
+  currentState.players.map((player) => player.id),
+);
+
+const assignedPlayerIds = new Set([
+  ...updatedQueue.flatMap(getMatchPlayerIds),
+  ...currentState.activeMatches.flatMap(getMatchPlayerIds),
+]);
+
+let updatedWaitingPlayerIds = [
+  ...new Set(currentState.waitingPlayerIds),
+].filter(
+  (playerId) =>
+    existingPlayerIds.has(playerId) &&
+    !assignedPlayerIds.has(playerId),
+);
 
   while (
     updatedQueue.length < MAX_PREPARED_MATCHES &&
