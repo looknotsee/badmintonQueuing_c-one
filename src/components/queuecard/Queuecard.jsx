@@ -8,6 +8,7 @@ function QueueCard({
   matchQueueLength,
   draggedMatchId,
   dragOverQueueIndex,
+  isLaunching,
   onDragStart,
   onDragEnd,
   onDragOver,
@@ -25,7 +26,8 @@ function QueueCard({
         draggedMatchId !== match.id
           ? "queue-card-drag-over"
           : ""
-      }`}
+      } ${isLaunching ? "queue-card-launching" : ""}`}
+      data-match-id={match.id}
       draggable
       onDragStart={(event) => onDragStart(event, match.id)}
       onDragEnd={onDragEnd}

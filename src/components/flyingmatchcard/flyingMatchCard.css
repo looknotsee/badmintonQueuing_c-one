@@ -1,0 +1,24 @@
+.flying-match-card {
+    position: fixed;
+    z-index: 1200;
+    padding: 0.65rem;
+    border: 1px solid var(--green-500);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    box-shadow: var(--shadow-next);
+    pointer-events: none;
+    opacity: 1;
+    transform-origin: center center;
+    transition:
+        transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1),
+        opacity 0.3s ease 0.25s;
+    will-change: transform, opacity;
+}
+
+.flying-match-card-arriving {
+    opacity: 0;
+}
+
+.flying-match-card .vs-divider {
+    margin: 0.3rem 0;
+}

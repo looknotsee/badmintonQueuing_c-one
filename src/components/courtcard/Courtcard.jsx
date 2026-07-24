@@ -37,6 +37,7 @@ function CourtCard({
       className={`court-card ${activeMatch ? "court-active" : ""} ${
         isDropTarget ? "court-drop-target" : ""
       } ${isOvertime ? "court-overtime" : ""}`}
+      data-court-id={court.id}
       onDragOver={(event) => onDragOver(event, court)}
       onDragLeave={() => onDragLeave(court)}
       onDrop={(event) => onDrop(event, court)}

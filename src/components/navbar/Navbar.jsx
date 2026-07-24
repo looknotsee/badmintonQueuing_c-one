@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import "./navbar.css";
+import logo from "../../assets/Logo.png";
 
 import { FaHome } from "react-icons/fa";
 import { FaUsers } from "react-icons/fa";
@@ -46,7 +47,7 @@ export default function Navbar() {
         <div className="logo">
           <img
             className="logoImg"
-            src="src/assets/Logo.png"
+            src={logo}
             alt="C-ONE Logo"
           />
         </div>
@@ -57,8 +58,8 @@ export default function Navbar() {
           <FaHome /> Home
         </a>
 
-        <a className="navBtn" href="/players">
-          <FaUsers /> Players
+        <a className="navBtn" href="/session">
+          <FaUsers /> Session
         </a>
       </nav>
     </>
