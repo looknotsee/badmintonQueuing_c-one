@@ -42,7 +42,6 @@ function QueueCard({
           {index === 0 ? "Next Match" : `Queue ${index + 1}`}
         </strong>
 
-        <span>{match.id.split("-").slice(0, 2).join("-")}</span>
       </header>
 
       <TeamBox playerIds={match.teamOne} players={players} />

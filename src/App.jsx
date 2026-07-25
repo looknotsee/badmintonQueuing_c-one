@@ -8,6 +8,7 @@ import RegisterModal from "./components/registermodal/Registermodal";
 import PlayerPoolModal from "./components/playerpool/PlayerPoolModal";
 import FlyingMatchCard from "./components/flyingmatchcard/Flyingmatchcard";
 import { sampleCourts, samplePlayers } from "./data/sampleData";
+import PlayerPoolCard from "./components/playerpool/PlayerPoolCard";
 
 import {
 createId,
@@ -647,32 +648,30 @@ async function resetPrototype() {
     ? getMatchPlayerIds(editingMatch)
     : [];
 
-  const manualEditorPlayerIds = [
-    ...new Set([...waitingPlayerIds, ...editingMatchPlayerIds]),
-  ];
+  const manualEditorEligiblePlayerIds = new Set([
+    ...waitingPlayerIds,
+    ...editingMatchPlayerIds,
+  ]);
 
-  const manualEditorPlayers = manualEditorPlayerIds
-    .map((playerId) => players.find((player) => player.id === playerId))
-    .filter(Boolean)
-    .sort((firstPlayer, secondPlayer) =>
+  const manualEditorPoolPlayers = [...players].sort(
+    (firstPlayer, secondPlayer) =>
       firstPlayer.name.localeCompare(secondPlayer.name),
-    );
+  );
 
   const selectedManualPlayerIds = [
     ...manualTeams.teamOne,
     ...manualTeams.teamTwo,
   ].filter(Boolean);
+    function renderManualPlayerSlot(
+    teamName,
+    playerIndex,
+    label,
+  ) {
+    const playerId =
+      manualTeams[teamName][playerIndex];
 
-  function renderManualPlayerSlot(
-  teamName,
-  playerIndex,
-  label,
-) {
-  const playerId =
-    manualTeams[teamName][playerIndex];
-
-  const player = players.find(
-    (currentPlayer) => currentPlayer.id === playerId,
+    const player = players.find(
+      (currentPlayer) => currentPlayer.id === playerId,
   );
 
   return (
@@ -888,19 +887,84 @@ async function resetPrototype() {
               </button>
             </div>
 
-            <div className="manual-team-grid">
-              <div className="manual-team-card">
-                <h3>Team One</h3>
-                {renderManualPlayerSlot("teamOne", 0, "Player 1")}
-                {renderManualPlayerSlot("teamOne", 1, "Player 2")}
-              </div>
+<div className="manual-editor-layout">
+  <div className="manual-team-grid">
+    <div className="manual-team-card">
+      <h3>Team One</h3>
 
-              <div className="manual-team-card">
-                <h3>Team Two</h3>
-                {renderManualPlayerSlot("teamTwo", 0, "Player 1")}
-                {renderManualPlayerSlot("teamTwo", 1, "Player 2")}
-              </div>
-            </div>
+      {renderManualPlayerSlot(
+        "teamOne",
+        0,
+        "Player 1",
+      )}
+
+      {renderManualPlayerSlot(
+        "teamOne",
+        1,
+        "Player 2",
+      )}
+    </div>
+
+    <div className="manual-team-card">
+      <h3>Team Two</h3>
+
+      {renderManualPlayerSlot(
+        "teamTwo",
+        0,
+        "Player 1",
+      )}
+
+      {renderManualPlayerSlot(
+        "teamTwo",
+        1,
+        "Player 2",
+      )}
+    </div>
+  </div>
+
+  <aside
+    className="manual-player-pool-panel"
+    aria-labelledby="manual-player-pool-title"
+  >
+    <div className="manual-player-pool-heading">
+      <div>
+        <h3 id="manual-player-pool-title">
+          Player Pool
+        </h3>
+
+        <p>
+          Drag an available player into any team slot.
+        </p>
+      </div>
+
+      <span>{players.length}</span>
+    </div>
+
+    <div className="manual-player-pool-grid">
+      {manualEditorPoolPlayers.map((player) => {
+        const playerIsEligible =
+          manualEditorEligiblePlayerIds.has(player.id);
+
+        const playerIsSelected =
+          selectedManualPlayerIds.includes(player.id);
+
+        return (
+          <PlayerPoolCard
+            key={player.id}
+            player={player}
+            playerLocation={findPlayerLocation(player.id)}
+            draggable
+            dragDisabled={!playerIsEligible}
+            isSelected={playerIsSelected}
+            showRemoveControls={false}
+            onDragStart={handleManualPlayerDragStart}
+            onDragEnd={handleManualPlayerDragEnd}
+          />
+        );
+      })}
+    </div>
+  </aside>
+</div>
 
             {matchEditorError && (
               <div className="match-editor-error" role="alert">
