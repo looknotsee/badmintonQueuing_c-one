@@ -6,23 +6,44 @@ const GAME_FEE_PESOS = 15;
 function PlayerPoolCard({
   player,
   playerLocation,
-  pendingRemovalPlayerId,
+  pendingRemovalPlayerId = null,
   requestPlayerRemoval,
   cancelPlayerRemoval,
   confirmPlayerRemoval,
+
+  draggable = false,
+  dragDisabled = false,
+  isSelected = false,
+  showRemoveControls = true,
+  onDragStart,
+  onDragEnd,
 }) {
   const removalIsPending =
     pendingRemovalPlayerId === player.id;
 
   const playerCanBeRemoved =
     player.status !== "inGame";
+  const playerCanBeDragged =
+    draggable && !dragDisabled;
 
   const gamesPlayed = Number(player.gamesPlayed) || 0;
   const amountDue = gamesPlayed * GAME_FEE_PESOS;
 
   return (
     <article
-      className={`player-pool-item ${player.status.toLowerCase()}`}
+      className={`player-pool-item ${player.status.toLowerCase()} ${
+        isSelected ? "manual-pool-card-selected" : ""
+      } ${
+        dragDisabled ? "manual-pool-card-disabled" : ""
+        }`}
+        draggable={playerCanBeDragged}
+        onDragStart={(event) => {
+          if (playerCanBeDragged) {
+            onDragStart?.(event, player.id);
+          }
+        }}
+      onDragEnd={onDragEnd}
+      aria-disabled={dragDisabled}
     >
       <div className="player-pool-item-header">
         <div
@@ -41,7 +62,7 @@ function PlayerPoolCard({
             {player.skillLevel}
           </span>
         </div>
-
+      {showRemoveControls && (
         <button
           type="button"
           className="remove-player-button"
@@ -55,8 +76,8 @@ function PlayerPoolCard({
         >
           Remove
         </button>
-
-        <span
+      )}
+        <span 
           className={`pool-status-badge ${player.status.toLowerCase()}`}
         >
           {player.status === "inGame"
@@ -65,7 +86,7 @@ function PlayerPoolCard({
         </span>
       </div>
 
-      {removalIsPending && (
+      {showRemoveControls && removalIsPending && (
         <div className="remove-player-confirmation">
           <p>
             Remove <strong>{player.name}</strong> from the current
@@ -75,7 +96,7 @@ function PlayerPoolCard({
           <div className="remove-player-confirmation-actions">
             <button
               className="secondary-button"
-              onClick={cancelPlayerRemoval}
+              onClick={() => cancelPlayerRemoval?.()}
             >
               Cancel
             </button>
