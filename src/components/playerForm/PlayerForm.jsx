@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import "./playerform.css"
 import { FaUserPlus, FaSearch, FaPlay, FaPlus } from "react-icons/fa";
 
-export default function PlayerForm({ onAddPlayer, existingPlayers = [] }) {
-  const navigate = useNavigate();
+export default function PlayerForm({
+  onAddPlayer,
+  existingPlayers = [],
+}) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [skill, setSkill] = useState("");
@@ -21,7 +22,7 @@ export default function PlayerForm({ onAddPlayer, existingPlayers = [] }) {
     setError("");
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     const trimmedFirst = firstName.trim();
     const trimmedLast = lastName.trim();
 
@@ -33,16 +34,27 @@ export default function PlayerForm({ onAddPlayer, existingPlayers = [] }) {
     // The shared player list stores a single "name" field, so combine
     // first/last here before handing it off.
     const fullName = [trimmedFirst, trimmedLast].filter(Boolean).join(" ");
+    
+    try {
+      const playerWasAdded = await onAddPlayer?.({
+        name: fullName,
+        skillLevel: skill || "Unknown",
+      });
 
-    onAddPlayer?.({
-      name: fullName,
-      skillLevel: skill || "Unknown",
-    });
+    if (!playerWasAdded) {
+      return;
+    }
 
     setFirstName("");
     setLastName("");
     setSkill("");
+    setSearch("");
     setError("");
+    } catch (addError) {
+      setError(
+        addError.message || "Could not add the player.",
+      );
+    }
   };
 
   const returningMatches = search.trim()
@@ -149,14 +161,11 @@ export default function PlayerForm({ onAddPlayer, existingPlayers = [] }) {
           {/* Actions */}
           <div className="action-row">
             <button className="add-btn" type="button" onClick={handleAdd}>
-              <FaPlus /> Add to List
+              <FaPlus /> Add to Pool
             </button>
             <button className="clear-btn" type="button" onClick={handleClear}>
               Clear
             </button>
-             <button className="start-btn" type="button" onClick={() => navigate("/session")}>
-              Start Session
-          </button>
           </div>
 
         </div>

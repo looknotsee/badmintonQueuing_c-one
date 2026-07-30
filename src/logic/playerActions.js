@@ -1,62 +1,63 @@
 import {createId, fillPreparedMatchQueue, getMatchPlayerIds} from "./matchmaking.js";
 
-export function getPlayerRegistrationError(players, playerName) {
-  const trimmedName = playerName.trim();
-
-  if (!trimmedName) {
-    return "Enter a player name before registering.";
-  }
-
-  const duplicatePlayerExists = players.some(
-    (player) =>
-      player.name.trim().toLowerCase() === trimmedName.toLowerCase(),
-  );
-
-  if (duplicatePlayerExists) {
-    return `${trimmedName} is already registered.`;
-  }
-
-  return null;
-}
-
-export function registerPlayerState(
+export function addDirectoryPlayerToActiveSessionState(
   currentState,
-  {
-    name,
-    skillLevel,
-    registeredAt = Date.now(),
-  },
+  directoryPlayer,
+  joinedAt = Date.now(),
 ) {
-  const trimmedName = name.trim();
+  if (!directoryPlayer?.id) {
+    return {
+      ...currentState,
+      statusMessage:
+        "The selected directory player could not be found.",
+    };
+  }
 
-  const newPlayer = {
-    id: createId("player"),
-    name: trimmedName,
-    skillLevel,
+  const playerAlreadyInSession =
+    currentState.players.some(
+      (player) => player.id === directoryPlayer.id,
+    );
+
+  if (playerAlreadyInSession) {
+    return {
+      ...currentState,
+      statusMessage:
+        `${directoryPlayer.name} is already in the current session.`,
+    };
+  }
+
+  const sessionPlayer = {
+    id: directoryPlayer.id,
+    name: directoryPlayer.name,
+    skillLevel:
+      directoryPlayer.skillLevel || "Unknown",
+
     gamesPlayed: 0,
     totalTimePlayed: 0,
     status: "available",
-    waitingSince: registeredAt,
+    waitingSince: joinedAt,
   };
 
-  const stateWithNewPlayer = {
+  const stateWithNewSessionPlayer = {
     ...currentState,
 
     players: [
       ...currentState.players,
-      newPlayer,
+      sessionPlayer,
     ],
 
     waitingPlayerIds: [
       ...currentState.waitingPlayerIds,
-      newPlayer.id,
+      sessionPlayer.id,
     ],
 
     statusMessage:
-      `${newPlayer.name} was registered and added to the waiting pool.`,
+      `${sessionPlayer.name} has joined the session and entered the waiting pool.`,
   };
 
-  return fillPreparedMatchQueue(stateWithNewPlayer);
+  return fillPreparedMatchQueue(
+    stateWithNewSessionPlayer,
+  );
 }
 
   export function removePlayerState(

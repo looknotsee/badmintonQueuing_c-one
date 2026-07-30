@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./App.css";
 import Navbar from "./components/navbar/Navbar";
 import CourtSection from "./components/courtsection/Courtsection";
@@ -17,7 +18,7 @@ fillPreparedMatchQueue
 } from "./logic/matchmaking.js";
 
 import {
-createInitialState,
+  createInitialState,
 } from "./logic/queueState.js";
 
 import {
@@ -38,10 +39,14 @@ import {
 } from "./logic/courtActions.js"
 
 import {
-  getPlayerRegistrationError,
-  registerPlayerState,
+  addDirectoryPlayerToActiveSessionState,
   removePlayerState
 } from "./logic/playerActions.js";
+
+import {
+  createDirectoryPlayer,
+  fetchPlayerDirectory,
+} from "./services/playerDirectoryRepository.js";
 
 import {
   getManualMatchError,
@@ -49,10 +54,15 @@ import {
 } from "./logic/matchSelectionValidation.js";
 
 import {
-  initializeQueueState,
-  updateQueueState,
-  subscribeToQueueState
-} from "./services/queueRepository.js";
+  fetchCurrentSession,
+  updateCurrentSession,
+  subscribeToCurrentSession,
+} from "./services/currentSessionRepository.js";
+
+import {
+  SESSION_STATUS,
+  endCurrentSession
+} from "./logic/sessionLifecycle.js";
 
 function App() {
 
@@ -60,7 +70,9 @@ function App() {
   () => createInitialState(),
   );
 
-  const queueVersionRef = useRef(null);
+  const navigate = useNavigate();
+  const currentSessionVersionRef = useRef(null);
+  const currentSessionRef = useRef(null);
   const systemStateRef = useRef(systemState);
 
   // This causes active court timers to update every second.
@@ -118,67 +130,86 @@ function App() {
   systemStateRef.current = systemState;
 }, [systemState]);
 
-  useEffect(() => {
-    const timerId = setInterval(() => {
-      setCurrentTime(Date.now());
-    }, 1000);
-
-    return () => clearInterval(timerId);
-  }, []);
-
-  useEffect(() => {
+useEffect(() => {
   let requestWasCancelled = false;
-  let unsubscribeFromQueueState = null;
+  let unsubscribeFromCurrentSession = null;
 
-  async function loadSharedQueueState() {
+  async function loadActiveSession() {
     try {
-      const initialState = createInitialState();
-
-      const queueRecord = await initializeQueueState(
-        initialState,
-      );
+      const sessionRecord =
+        await fetchCurrentSession();
 
       if (requestWasCancelled) {
         return;
       }
 
-      queueVersionRef.current = queueRecord.version;
-      systemStateRef.current = queueRecord.state;
-      setSystemState(queueRecord.state);
+      if (
+        sessionRecord.status !== SESSION_STATUS.ACTIVE ||
+        !sessionRecord.state
+      ) {
+        navigate("/", { replace: true });
+        return;
+      }
 
-      unsubscribeFromQueueState =
-        subscribeToQueueState((updatedRecord) => {
-          if (requestWasCancelled) {
-            return;
-          }
+      currentSessionVersionRef.current =
+        sessionRecord.version;
 
-          const currentVersion =
-            queueVersionRef.current ?? 0;
+      currentSessionRef.current =
+        sessionRecord;
 
-          /*
-           * Ignore duplicate or older events.
-           * This also prevents our own completed update
-           * from being unnecessarily applied twice.
-           */
-          if (updatedRecord.version <= currentVersion) {
-            return;
-          }
+      systemStateRef.current =
+        sessionRecord.state;
 
-          queueVersionRef.current =
-            updatedRecord.version;
+      setSystemState(sessionRecord.state);
 
-          systemStateRef.current =
-            updatedRecord.state;
+      unsubscribeFromCurrentSession =
+        subscribeToCurrentSession(
+          (updatedSession) => {
+            if (requestWasCancelled) {
+              return;
+            }
 
-          setSystemState(updatedRecord.state);
-        });
+            const currentVersion =
+              currentSessionVersionRef.current ?? 0;
+
+            if (
+              updatedSession.version <= currentVersion
+            ) {
+              return;
+            }
+
+            currentSessionVersionRef.current =
+              updatedSession.version;
+
+            currentSessionRef.current =
+              updatedSession;
+
+            /*
+             * When the queuemaster ends the session,
+             * every connected queue screen returns home.
+             */
+            if (
+              updatedSession.status !==
+                SESSION_STATUS.ACTIVE ||
+              !updatedSession.state
+            ) {
+              navigate("/", { replace: true });
+              return;
+            }
+
+            systemStateRef.current =
+              updatedSession.state;
+
+            setSystemState(updatedSession.state);
+          },
+        );
     } catch (error) {
       if (requestWasCancelled) {
         return;
       }
 
       console.error(
-        "Could not initialize the shared queue.",
+        "Could not load the active session.",
         error,
       );
 
@@ -190,46 +221,66 @@ function App() {
     }
   }
 
-  loadSharedQueueState();
+  loadActiveSession();
 
   return () => {
     requestWasCancelled = true;
-
-    if (unsubscribeFromQueueState) {
-      unsubscribeFromQueueState();
-    }
+    unsubscribeFromCurrentSession?.();
   };
-}, []);
+}, [navigate]);
 
+async function commitSharedStateChange(
+  stateTransition,
+) {
+  const currentVersion =
+    currentSessionVersionRef.current;
 
-  async function commitSharedStateChange(stateTransition) {
-  const currentVersion = queueVersionRef.current;
+  const currentSession =
+    currentSessionRef.current;
 
-  if (currentVersion === null) {
+  if (
+    currentVersion === null ||
+    !currentSession ||
+    currentSession.status !== SESSION_STATUS.ACTIVE
+  ) {
     console.error(
-      "The shared queue has not finished loading yet.",
+      "The active session has not finished loading.",
     );
 
     return null;
   }
 
   try {
-    const currentState = systemStateRef.current;
-    const nextState = stateTransition(currentState);
+    const currentState =
+      systemStateRef.current;
 
-    const updatedRecord = await updateQueueState(
-      nextState,
-      currentVersion,
-    );
+    const nextState =
+      stateTransition(currentState);
 
-    queueVersionRef.current = updatedRecord.version;
-    systemStateRef.current = updatedRecord.state;
-    setSystemState(updatedRecord.state);
-    
-    return updatedRecord;
+    const updatedSession =
+      await updateCurrentSession(
+        {
+          ...currentSession,
+          state: nextState,
+        },
+        currentVersion,
+      );
+
+    currentSessionVersionRef.current =
+      updatedSession.version;
+
+    currentSessionRef.current =
+      updatedSession;
+
+    systemStateRef.current =
+      updatedSession.state;
+
+    setSystemState(updatedSession.state);
+
+    return updatedSession;
   } catch (error) {
     console.error(
-      "Could not save the shared queue change.",
+      "Could not save the active session change.",
       error,
     );
 
@@ -241,6 +292,7 @@ function App() {
     return null;
   }
 }
+
 async function startMatchOnCourt(
   courtId,
   requestedMatchId = null,
@@ -393,42 +445,116 @@ async function reorderQueuedMatchToIndex(
     setDragOverCourtId(null);
   }
 
-  async function registerPlayer(event) {
+async function registerPlayer(event) {
   event.preventDefault();
 
-  const currentPlayers =
-    systemStateRef.current.players;
+  const trimmedName =
+    registrationForm.name.trim();
 
-  const registrationError = getPlayerRegistrationError(
-    currentPlayers,
-    registrationForm.name,
-  );
-
-  if (registrationError) {
+  if (!trimmedName) {
     setSystemState((currentState) => ({
       ...currentState,
-      statusMessage: registrationError,
+      statusMessage:
+        "Enter a player's name before registering.",
     }));
 
     return;
   }
 
-  const updatedRecord = await commitSharedStateChange(
-    (currentState) =>
-      registerPlayerState(
-        currentState,
-        registrationForm,
-      ),
-  );
+  const normalizedName =
+    trimmedName.toLowerCase();
 
-  if (!updatedRecord) {
-    return;
+  try {
+    let directoryPlayers =
+      await fetchPlayerDirectory();
+
+    let directoryPlayer =
+      directoryPlayers.find(
+        (player) =>
+          player.name.trim().toLowerCase() ===
+          normalizedName,
+      );
+
+    /*
+     * Create a persistent profile only when the
+     * player does not already exist in the directory.
+     */
+    if (!directoryPlayer) {
+      try {
+        directoryPlayer =
+          await createDirectoryPlayer({
+            name: trimmedName,
+            skillLevel:
+              registrationForm.skillLevel ||
+              "Unknown",
+          });
+      } catch (createError) {
+        /*
+         * Another device may have created the same
+         * player after our initial directory fetch.
+         */
+        directoryPlayers =
+          await fetchPlayerDirectory();
+
+        directoryPlayer =
+          directoryPlayers.find(
+            (player) =>
+              player.name
+                .trim()
+                .toLowerCase() ===
+              normalizedName,
+          );
+
+        if (!directoryPlayer) {
+          throw createError;
+        }
+      }
+    }
+
+    const playerAlreadyInSession =
+      systemStateRef.current.players.some(
+        (player) =>
+          player.id === directoryPlayer.id,
+      );
+
+    if (playerAlreadyInSession) {
+      setSystemState((currentState) => ({
+        ...currentState,
+        statusMessage:
+          `${directoryPlayer.name} is already in the current session.`,
+      }));
+
+      return;
+    }
+
+    const updatedSession =
+      await commitSharedStateChange(
+        (currentState) =>
+          addDirectoryPlayerToActiveSessionState(
+            currentState,
+            directoryPlayer,
+          ),
+      );
+
+    if (!updatedSession) {
+      return;
+    }
+
+    setRegistrationForm({
+      name: "",
+      skillLevel: "Beginner",
+    });
+  } catch (error) {
+    console.error(
+      "Could not register the session player.",
+      error,
+    );
+
+    setSystemState((currentState) => ({
+      ...currentState,
+      statusMessage: error.message,
+    }));
   }
-
-  setRegistrationForm({
-    name: "",
-    skillLevel: "Beginner",
-  });
 }
 
   function requestPlayerRemoval(playerId) {
@@ -607,10 +733,66 @@ function handleManualSlotDrop(
   closeManualMatchEditor();
 }
 
-async function resetPrototype() {
-  await commitSharedStateChange(
-    () => createInitialState(),
+async function handleEndSession() {
+  const currentSession =
+    currentSessionRef.current;
+
+  const currentVersion =
+    currentSessionVersionRef.current;
+
+  if (
+    !currentSession ||
+    currentVersion === null
+  ) {
+    return;
+  }
+
+  const currentState =
+    systemStateRef.current;
+
+  if (currentState.activeMatches.length > 0) {
+    setSystemState((existingState) => ({
+      ...existingState,
+      statusMessage:
+        "End or cancel all active matches before ending the session.",
+    }));
+
+    return;
+  }
+
+  const sessionShouldEnd = window.confirm(
+    "End the current session? All match queues, game counts, playtime, and completed-match data from this session will be cleared.",
   );
+
+  if (!sessionShouldEnd) {
+    return;
+  }
+
+  try {
+    const endedSession =
+      await updateCurrentSession(
+        endCurrentSession(currentSession),
+        currentVersion,
+      );
+
+    currentSessionVersionRef.current =
+      endedSession.version;
+
+    currentSessionRef.current =
+      endedSession;
+
+    navigate("/", { replace: true });
+  } catch (error) {
+    console.error(
+      "Could not end the session.",
+      error,
+    );
+
+    setSystemState((existingState) => ({
+      ...existingState,
+      statusMessage: error.message,
+    }));
+  }
 }
 
   const inGamePlayerCount = getInGamePlayerCount(players);
@@ -770,10 +952,10 @@ async function resetPrototype() {
 
           <button
             type="button"
-            className="secondary-button"
-            onClick={resetPrototype}
+            className="danger-button"
+            onClick={handleEndSession}
           >
-            Reset Prototype
+            End Session
           </button>
         </div>
       </header>
