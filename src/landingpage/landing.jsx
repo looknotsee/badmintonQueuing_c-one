@@ -246,6 +246,7 @@ async function handleCancelSessionSetup() {
 }
 
 async function handleAddPlayer({
+  playerId = null,
   name,
   skillLevel,
 }) {
@@ -260,23 +261,52 @@ async function handleAddPlayer({
     return false;
   }
 
+  const trimmedName = name.trim();
   const normalizedName =
-    name.trim().toLowerCase();
+    trimmedName.toLowerCase();
 
   try {
-    /* Reuse a persistent directory player when the name already exists. */
-    let directoryPlayer = directoryPlayers.find(
-      (player) =>
-        player.name.trim().toLowerCase() ===
-        normalizedName,
-    );
+    /*
+     * A returning player must be explicitly selected
+     * from the autocomplete results.
+     */
+    let directoryPlayer = playerId
+      ? directoryPlayers.find(
+          (player) => player.id === playerId,
+        )
+      : null;
 
-    /* Otherwise, create a new persistent player */
-    
+    if (playerId && !directoryPlayer) {
+      setError(
+        "The selected returning player could not be found.",
+      );
+
+      return false;
+    }
+
+    /*
+     * Do not silently treat typed text as a returning
+     * player, even when the name exactly matches.
+     */
     if (!directoryPlayer) {
+      const matchingSavedPlayer =
+        directoryPlayers.find(
+          (player) =>
+            player.name.trim().toLowerCase() ===
+            normalizedName,
+        );
+
+      if (matchingSavedPlayer) {
+        setError(
+          `Select ${matchingSavedPlayer.name} from the suggestions to add the saved player.`,
+        );
+
+        return false;
+      }
+
       directoryPlayer =
         await createDirectoryPlayer({
-          name,
+          name: trimmedName,
           skillLevel,
         });
 
@@ -400,6 +430,10 @@ async function confirmPlayerRemoval(playerId) {
     !setupHasEnoughPlayers
   );
 
+  const registrationIsDisabled =
+  isSessionLifecycleLoading ||
+  currentSession?.status !== SESSION_STATUS.SETUP;
+
   return (
     <div>
       <header className="top-bar">
@@ -416,12 +450,27 @@ async function confirmPlayerRemoval(playerId) {
 
           {error && <p className="landing-error">{error}</p>}
 
+          {registrationIsDisabled && (
+            <p className="registration-disabled-note">
+              Create a new session before adding players to the pool.
+            </p>
+          )}
+
           <PlayerForm
             onAddPlayer={handleAddPlayer}
             existingPlayers={directoryPlayers}
+            isDisabled={registrationIsDisabled}
           />
 
-  <section className="session-control-panel">
+  <section
+  className={`session-control-panel ${
+    currentSession?.status === SESSION_STATUS.IDLE
+      ? "session-control-panel-idle"
+      : currentSession?.status === SESSION_STATUS.SETUP
+        ? "session-control-panel-setup"
+        : "session-control-panel-active"
+    }`}
+  >
     <div className="session-status-content">
       {isSessionLifecycleLoading ? (
         <>

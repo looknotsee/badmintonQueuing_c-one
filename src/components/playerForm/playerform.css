@@ -139,11 +139,72 @@
     white-space: nowrap;
 }
 
+.search {
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.search:focus-within {
+  border-color: var(--green-500);
+  box-shadow:
+    0 0 0 3px
+    color-mix(
+      in srgb,
+      var(--green-500) 15%,
+      transparent
+    );
+}
+
+.returning-player-note {
+  margin: -4px 0 0;
+  padding: 8px 10px;
+  border: 1px solid #b6ddc5;
+  border-radius: 8px;
+  background: var(--green-tint);
+  color: var(--green-700);
+  font-size: var(--note-size);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.skill-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.skill-btn--active:disabled {
+  opacity: 1;
+}
+
 .form-error {
     margin: 0;
     font-size: var(--note-size);
     color: #b23a2f;
     font-weight: 600;
+}
+.search-input:disabled {
+  cursor: not-allowed;
+  color: #7d857f;
+}
+
+.search:has(.search-input:disabled) {
+  background: #f2f4f2;
+  border-color: #d8ddd9;
+}
+
+.add-btn:disabled {
+  cursor: not-allowed;
+  background: #a8adaa;
+  opacity: 0.75;
+}
+
+.clear-btn:disabled {
+  cursor: not-allowed;
+  border-color: #d5d9d6;
+  background: #eef0ee;
+  color: #929894;
+  opacity: 0.75;
 }
 
 /* ── Section Label ── */
@@ -153,41 +214,6 @@
     letter-spacing: 0.05em;
     margin: 4px 0 0;
     color: #555;
-}
-
-/* ── Name Row ── */
-.name-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    width: 100%;
-}
-
-.field-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.field-label {
-    font-size: clamp(11px, 1.2vw, 13px);
-    color: var(--black);
-    font-weight: 500;
-}
-
-.field-input {
-    padding: 8px 14px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: var(--text-size);
-    outline: none;
-    transition: border-color 0.2s;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.field-input:focus {
-    border-color: var(--green);
 }
 
 /* ── Skill Level ── */
@@ -297,20 +323,6 @@
     border-color: #999;
 }
 
-.start-btn {
-    flex: 2;
-    align-items: center;
-    justify-content: center;
-    padding: 0px 20px;
-    background-color: var(--green-500);
-    color: var(--green-tint);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: var(--text-size);
-    cursor: pointer;
-    transition: border-color 0.2s;
-}
-
 /* ── Responsive ── */
 @media (max-width: 1024px) {
     .playerform-container {
@@ -321,10 +333,6 @@
 }
 
 @media (max-width: 600px) {
-    .name-row {
-        grid-template-columns: 1fr;
-    }
-
     .skill-row {
         gap: 6px;
     }
