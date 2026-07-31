@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./playerform.css";
 import {
   FaUserPlus,
@@ -46,6 +46,12 @@ export default function PlayerForm({
     setShowSuggestions(false);
     setError("");
   }
+
+  useEffect(() => {
+  if (isDisabled) {
+    handleClear();
+  }
+  }, [isDisabled]);
 
   function handleNameChange(event) {
     const nextName = event.target.value;

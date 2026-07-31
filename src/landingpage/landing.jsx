@@ -298,7 +298,7 @@ async function handleAddPlayer({
 
       if (matchingSavedPlayer) {
         setError(
-          `Select ${matchingSavedPlayer.name} from the suggestions to add the saved player.`,
+          `Player "${matchingSavedPlayer.name}" is already apart of the directory, please select from the suggestions.`,
         );
 
         return false;
@@ -337,7 +337,7 @@ async function handleAddPlayer({
       )
     ) {
       setError(
-        `${directoryPlayer.name} is already in the session roster.`,
+        `${directoryPlayer.name} is already in the session pool.`,
       );
 
       return false;
@@ -521,7 +521,7 @@ async function confirmPlayerRemoval(playerId) {
           ? setupHasEnoughPlayers
           ? "session-primary-action-ready"
           : "session-primary-action-waiting"
-        : currentSession?.status === SESSION_STATUS.ACTIVE
+        : currentSession?.status === SESSION_STATUS.ACTIVE || currentSession?.status === SESSION_STATUS.IDLE
           ? "session-primary-action-ready"
           : ""
       }`}

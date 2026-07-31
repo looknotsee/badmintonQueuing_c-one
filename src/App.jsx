@@ -127,8 +127,18 @@ function App() {
   } = systemState;
 
   useEffect(() => {
+  const timerInterval = window.setInterval(() => {
+    setCurrentTime(Date.now());
+  }, 1000);
+
+  return () => {
+    window.clearInterval(timerInterval);
+  };
+  }, []);
+  
+  useEffect(() => {
   systemStateRef.current = systemState;
-}, [systemState]);
+  }, [systemState]);
 
 useEffect(() => {
   let requestWasCancelled = false;

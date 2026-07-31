@@ -192,7 +192,7 @@ body,
   background: #fff7e5;
   color: #805d17;
   font-size: clamp(13px, 1.2vw, 15px);
-  font-weight: 700;
+  font-weight: 550;
   line-height: 1.45;
   text-align: center;
 }
