@@ -157,13 +157,13 @@
 }
 
 .returning-player-note {
-  margin: -4px 0 0;
+  margin: -2px 0 0;
   padding: 8px 10px;
   border: 1px solid #b6ddc5;
   border-radius: 8px;
   background: var(--green-tint);
   color: var(--green-700);
-  font-size: var(--note-size);
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.4;
 }
@@ -225,7 +225,7 @@
 
 .skill-btn {
     color: var(--ink-500);
-    padding: 7px 14px;
+    padding: 5px 14px;
     border: 2px solid var(--border);
     border-radius: 8px;
     background-color: transparent;
@@ -291,7 +291,8 @@
     color: #fff;
     border: none;
     border-radius: 8px;
-    font-weight: 600;
+    font-weight: 550;
+    font-size: 15px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -314,7 +315,7 @@
     color: var(--black);
     border: 1px solid #ccc;
     border-radius: 8px;
-    font-size: var(--text-size);
+    font-size: 16px;
     cursor: pointer;
     transition: border-color 0.2s;
 }

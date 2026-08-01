@@ -230,7 +230,7 @@ export default function PlayerForm({
               onClick={handleClear}
               disabled={isDisabled}
             >
-              Clear
+              Clear Name
             </button>
           </div>
         </div>
