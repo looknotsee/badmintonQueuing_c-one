@@ -32,11 +32,24 @@ function CourtCard({
     court.status === "available" &&
     dragOverCourtId === court.id;
 
+  const isAvailableWhileDragging =
+    Boolean(draggedMatchId) &&
+    !activeMatch &&
+    court.status === "available";
+
   return (
     <article
-      className={`court-card ${activeMatch ? "court-active" : ""} ${
+      className={`court-card ${
+        activeMatch ? "court-active" : ""
+      } ${
+        isAvailableWhileDragging
+          ? "court-drag-available"
+          : ""
+      } ${
         isDropTarget ? "court-drop-target" : ""
-      } ${isOvertime ? "court-overtime" : ""}`}
+      } ${
+        isOvertime ? "court-overtime" : ""
+      }`}
       data-court-id={court.id}
       onDragOver={(event) => onDragOver(event, court)}
       onDragLeave={() => onDragLeave(court)}
