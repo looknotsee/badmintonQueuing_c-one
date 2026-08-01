@@ -7,6 +7,7 @@ function mapCurrentSessionRow(row) {
     status: row.status,
     sessionId: row.session_id,
     draftPlayerIds: row.draft_player_ids ?? [],
+    draftPlayers: row.draft_players ?? [],
     state: row.state_json,
     version: Number(row.version),
     startedAt: row.started_at,
@@ -22,6 +23,7 @@ export async function fetchCurrentSession() {
         status,
         session_id,
         draft_player_ids,
+        draft_players,
         state_json,
         version,
         started_at,
@@ -58,6 +60,8 @@ export async function updateCurrentSession(
       session_id: nextSession.sessionId,
       draft_player_ids:
         nextSession.draftPlayerIds ?? [],
+      draft_players:
+        nextSession.draftPlayers ?? [],
       state_json: nextSession.state ?? null,
       version: nextVersion,
       started_at: nextSession.startedAt ?? null,
@@ -70,6 +74,7 @@ export async function updateCurrentSession(
         status,
         session_id,
         draft_player_ids,
+        draft_players,
         state_json,
         version,
         started_at,

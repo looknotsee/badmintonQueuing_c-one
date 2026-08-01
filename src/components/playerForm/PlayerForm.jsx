@@ -17,6 +17,8 @@ export default function PlayerForm({
     useState(null);
   const [showSuggestions, setShowSuggestions] =
     useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] =
+  useState(0);
   const [error, setError] = useState("");
 
   const skillLevels = [
@@ -39,12 +41,16 @@ export default function PlayerForm({
         )
       : [];
 
+  const visibleReturningMatches =
+    returningMatches.slice(0, 5);
+
   function handleClear() {
     setName("");
     setSkill("");
     setSelectedPlayerId(null);
     setShowSuggestions(false);
     setError("");
+    setActiveSuggestionIndex(0);
   }
 
   useEffect(() => {
@@ -68,6 +74,7 @@ export default function PlayerForm({
     setSelectedPlayerId(null);
     setShowSuggestions(true);
     setError("");
+    setActiveSuggestionIndex(0);
   }
 
   function handleSelectReturningPlayer(player) {
@@ -78,7 +85,105 @@ export default function PlayerForm({
     );
     setShowSuggestions(false);
     setError("");
+    setActiveSuggestionIndex(0);
   }
+
+  function handleNameKeyDown(event) {
+  if (
+    event.key === "ArrowDown" &&
+    visibleReturningMatches.length > 0
+  ) {
+    event.preventDefault();
+    setShowSuggestions(true);
+
+    setActiveSuggestionIndex(
+      (currentIndex) =>
+        (currentIndex + 1) %
+        visibleReturningMatches.length,
+    );
+
+    return;
+  }
+
+  if (
+    event.key === "ArrowUp" &&
+    visibleReturningMatches.length > 0
+  ) {
+    event.preventDefault();
+    setShowSuggestions(true);
+
+    setActiveSuggestionIndex(
+      (currentIndex) =>
+        (
+          currentIndex -
+          1 +
+          visibleReturningMatches.length
+        ) % visibleReturningMatches.length,
+    );
+
+    return;
+  }
+
+  if (event.key !== "Enter") {
+    return;
+  }
+
+  event.preventDefault();
+
+  /*
+   * A returning player has already been selected:
+   * the second Enter adds them to the pool.
+   */
+  if (selectedPlayerId) {
+    handleAdd();
+    return;
+  }
+
+  /*
+   * First Enter selects the highlighted directory
+   * suggestion instead of immediately adding it.
+   */
+  if (
+    showSuggestions &&
+    visibleReturningMatches.length > 0
+  ) {
+    const highlightedPlayer =
+      visibleReturningMatches[
+        activeSuggestionIndex
+      ];
+
+    if (highlightedPlayer) {
+      handleSelectReturningPlayer(
+        highlightedPlayer,
+      );
+    }
+
+    return;
+  }
+
+  /*
+   * There are no returning-player matches, so this
+   * is treated as a new player.
+   */
+  handleAdd();
+}
+
+function handleFormKeyDown(event) {
+  if (
+    event.key !== "Enter" ||
+    event.target.classList.contains(
+      "search-input",
+    )
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+
+  if (!isDisabled) {
+    handleAdd();
+  }
+}
 
   async function handleAdd() {
     const trimmedName = name.trim();
@@ -119,7 +224,10 @@ export default function PlayerForm({
           </p>
         </div>
 
-        <div className="playerform-fields">
+        <div 
+          className="playerform-fields"
+          onKeyDownCapture={handleFormKeyDown}
+        >
           <p className="note">PLAYER NAME</p>
 
           <div className="search-wrapper">
@@ -132,12 +240,14 @@ export default function PlayerForm({
                 autoComplete="off"
                 disabled={isDisabled}
                 onChange={handleNameChange}
-                onFocus={() =>
+                onFocus={() => {
                   setShowSuggestions(true)
-                }
+                  setActiveSuggestionIndex(0)
+                }}
                 onBlur={() =>
                   setShowSuggestions(false)
                 }
+                onKeyDown={handleNameKeyDown}
               />
 
               <FaSearch className="search-icon" />
@@ -146,13 +256,19 @@ export default function PlayerForm({
             {showSuggestions &&
               returningMatches.length > 0 && (
                 <ul className="search-results">
-                  {returningMatches
-                    .slice(0, 5)
-                    .map((player) => (
+                  {visibleReturningMatches.map(
+                    (player, playerIndex) => (
                       <li key={player.id}>
                         <button
                           type="button"
-                          className="search-result-item"
+                          className={`search-result-item ${
+                            playerIndex === activeSuggestionIndex
+                              ? "search-result-item--active"
+                              : ""
+                          }`}
+                          onMouseEnter={() =>
+                            setActiveSuggestionIndex(playerIndex)
+                          }
                           onMouseDown={(event) =>
                             event.preventDefault()
                           }

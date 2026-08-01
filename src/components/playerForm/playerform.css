@@ -132,6 +132,12 @@
     background-color: #f3f5f3;
 }
 
+.search-result-item--active {
+  background-color: var(--green-tint);
+  color: var(--green-800);
+  outline: 1px solid var(--green-500);
+}
+
 .search-result-skill {
     font-size: var(--note-size);
     color: #888;

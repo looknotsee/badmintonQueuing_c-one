@@ -13,7 +13,6 @@ import {
 } from "../services/currentSessionRepository.js";
 
 import {
-  createDirectoryPlayer,
   fetchPlayerDirectory,
   subscribeToPlayerDirectory
 } from "../services/playerDirectoryRepository.js";
@@ -265,30 +264,44 @@ async function handleAddPlayer({
   const normalizedName =
     trimmedName.toLowerCase();
 
+  if (!trimmedName) {
+    setError("Enter a player name.");
+    return false;
+  }
+
   try {
+    let draftPlayer;
+
     /*
-     * A returning player must be explicitly selected
-     * from the autocomplete results.
+     * Returning players reuse their persistent
+     * directory ID and saved skill level.
      */
-    let directoryPlayer = playerId
-      ? directoryPlayers.find(
+    if (playerId) {
+      const directoryPlayer =
+        directoryPlayers.find(
           (player) => player.id === playerId,
-        )
-      : null;
+        );
 
-    if (playerId && !directoryPlayer) {
-      setError(
-        "The selected returning player could not be found.",
-      );
+      if (!directoryPlayer) {
+        setError(
+          "The selected returning player could not be found.",
+        );
 
-      return false;
-    }
+        return false;
+      }
 
-    /*
-     * Do not silently treat typed text as a returning
-     * player, even when the name exactly matches.
-     */
-    if (!directoryPlayer) {
+      draftPlayer = {
+        id: directoryPlayer.id,
+        name: directoryPlayer.name,
+        skillLevel:
+          directoryPlayer.skillLevel || "Unknown",
+        isDirectoryPlayer: true,
+      };
+    } else {
+      /*
+       * Prevent accidentally creating a temporary
+       * duplicate of an existing directory player.
+       */
       const matchingSavedPlayer =
         directoryPlayers.find(
           (player) =>
@@ -298,46 +311,35 @@ async function handleAddPlayer({
 
       if (matchingSavedPlayer) {
         setError(
-          `Player "${matchingSavedPlayer.name}" is already apart of the directory, please select from the suggestions.`,
+          `Player "${matchingSavedPlayer.name}" is already part of the directory. Select them from the suggestions.`,
         );
 
         return false;
       }
 
-      directoryPlayer =
-        await createDirectoryPlayer({
-          name: trimmedName,
-          skillLevel,
-        });
-
-      setDirectoryPlayers((currentPlayers) => {
-        if (
-          currentPlayers.some(
-            (player) =>
-              player.id === directoryPlayer.id,
-          )
-        ) {
-          return currentPlayers;
-        }
-
-        return [
-          ...currentPlayers,
-          directoryPlayer,
-        ].sort((firstPlayer, secondPlayer) =>
-          firstPlayer.name.localeCompare(
-            secondPlayer.name,
-          ),
-        );
-      });
+      /*
+       * New players remain temporary during setup.
+       * They are not inserted into player_directory.
+       */
+      draftPlayer = {
+        id: crypto.randomUUID(),
+        name: trimmedName,
+        skillLevel: skillLevel || "Unknown",
+        isDirectoryPlayer: false,
+      };
     }
 
-    if (
-      currentSession.draftPlayerIds.includes(
-        directoryPlayer.id,
-      )
-    ) {
+    const playerAlreadyInRoster =
+      (currentSession.draftPlayers ?? []).some(
+        (player) =>
+          player.id === draftPlayer.id ||
+          player.name.trim().toLowerCase() ===
+            draftPlayer.name.trim().toLowerCase(),
+      );
+
+    if (playerAlreadyInRoster) {
       setError(
-        `${directoryPlayer.name} is already in the session pool.`,
+        `${draftPlayer.name} is already in the session pool.`,
       );
 
       return false;
@@ -348,7 +350,7 @@ async function handleAddPlayer({
         (latestSession) =>
           addDraftPlayerToSession(
             latestSession,
-            directoryPlayer.id,
+            draftPlayer,
           ),
       );
 
@@ -400,25 +402,13 @@ async function confirmPlayerRemoval(playerId) {
   setPendingRemovalPlayerId(null);
 }
 
-  const draftRosterPlayerIds =
-  currentSession?.draftPlayerIds ?? [];
-
-  const draftRosterPlayers =
-  draftRosterPlayerIds
-    .map((playerId) =>
-      directoryPlayers.find(
-        (player) => player.id === playerId,
-      ),
-    )
-    .filter(Boolean)
+ const draftRosterPlayers =
+  (currentSession?.draftPlayers ?? [])
     .map((player) => ({
       ...player,
-
-      /* Playerlist currently expects a queue-style status.
-         During setup, every roster member is simply available. */
       status: "available",
     }));
-
+    
   const setupHasEnoughPlayers =
     draftRosterPlayers.length >= 4;
 

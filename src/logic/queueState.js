@@ -27,66 +27,58 @@ export function createInitialState() {
 }
 
 export function createFreshSessionQueueState(
-  directoryPlayers,
-  draftPlayerIds,
+  draftPlayers,
   startedAt = Date.now(),
 ) {
-  const directoryPlayerMap = new Map(
-    directoryPlayers.map((player) => [
-      player.id,
-      player,
-    ]),
-  );
-
-  /*
-   * Remove duplicate roster IDs while preserving
-   * the order in which players were added.
-   */
-  const uniqueDraftPlayerIds = [
-    ...new Set(draftPlayerIds),
+  const uniqueDraftPlayers = [
+    ...new Map(
+      (draftPlayers ?? [])
+        .filter(
+          (player) =>
+            player?.id &&
+            player?.name?.trim(),
+        )
+        .map((player) => [
+          player.id,
+          player,
+        ]),
+    ).values(),
   ];
 
-  const sessionPlayers = uniqueDraftPlayerIds
-    .map((playerId, index) => {
-      const directoryPlayer =
-        directoryPlayerMap.get(playerId);
-
-      /*
-       * Ignore stale roster IDs whose directory
-       * player no longer exists.
-       */
-      if (!directoryPlayer) {
-        return null;
-      }
-
-      return {
-        id: directoryPlayer.id,
-        name: directoryPlayer.name,
+  const sessionPlayers =
+    uniqueDraftPlayers.map(
+      (draftPlayer, index) => ({
+        id: draftPlayer.id,
+        name: draftPlayer.name.trim(),
         skillLevel:
-          directoryPlayer.skillLevel || "Unknown",
+          draftPlayer.skillLevel || "Unknown",
+
+        /*
+         * False means the profile is temporary and
+         * should enter the directory only after the
+         * player completes their first game.
+         */
+        isDirectoryPlayer:
+          draftPlayer.isDirectoryPlayer === true,
 
         gamesPlayed: 0,
         totalTimePlayed: 0,
         status: "available",
-
-        /*
-         * Preserve roster order for players whose
-         * game and playtime totals are still tied.
-         */
         waitingSince: startedAt + index,
-      };
-    })
-    .filter(Boolean);
+      }),
+    );
 
-  const sessionPlayerIds = sessionPlayers.map(
-    (player) => player.id,
-  );
+  const sessionPlayerIds =
+    sessionPlayers.map(
+      (player) => player.id,
+    );
 
-  const freshCourts = sampleCourts.map((court) => ({
-    ...court,
-    status: "available",
-    currentMatchId: null,
-  }));
+  const freshCourts =
+    sampleCourts.map((court) => ({
+      ...court,
+      status: "available",
+      currentMatchId: null,
+    }));
 
   const freshSessionState = {
     players: sessionPlayers,

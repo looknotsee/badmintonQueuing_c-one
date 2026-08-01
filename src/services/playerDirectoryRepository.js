@@ -82,6 +82,76 @@ export async function createDirectoryPlayer({
   return mapPlayerDirectoryRow(data);
 }
 
+export async function createDirectoryPlayerWithId({
+  id,
+  name,
+  skillLevel,
+}) {
+  const trimmedName = name.trim();
+
+  if (!id) {
+    throw new Error(
+      "A player ID is required when promoting a session player.",
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("player_directory")
+    .insert({
+      id,
+      name: trimmedName,
+      skill_level: skillLevel || "Unknown",
+    })
+    .select(PLAYER_DIRECTORY_COLUMNS)
+    .single();
+
+  if (!error) {
+    return mapPlayerDirectoryRow(data);
+  }
+
+  /*
+   * Another connected queue screen may already have
+   * promoted this same player after the match ended.
+   */
+  if (error.code === "23505") {
+    const {
+      data: existingPlayer,
+      error: existingPlayerError,
+    } = await supabase
+      .from("player_directory")
+      .select(PLAYER_DIRECTORY_COLUMNS)
+      .eq("id", id)
+      .maybeSingle();
+
+    if (existingPlayerError) {
+      console.error(
+        "Could not verify the promoted directory player.",
+        existingPlayerError,
+      );
+
+      throw new Error(
+        `Could not verify the promoted directory player: ${existingPlayerError.message}`,
+      );
+    }
+
+    if (existingPlayer) {
+      return mapPlayerDirectoryRow(existingPlayer);
+    }
+  }
+
+  console.error(
+    "Could not promote the session player to the directory.",
+    error,
+  );
+
+  throw new Error(
+    getDirectoryErrorMessage(
+      error,
+      "Could not promote the session player to the directory",
+    ),
+  );
+}
+
 export async function updateDirectoryPlayer(
   playerId,
   {

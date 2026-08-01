@@ -36,6 +36,7 @@ export function beginSessionSetup(currentSession) {
     status: SESSION_STATUS.SETUP,
     sessionId: crypto.randomUUID(),
     draftPlayerIds: [],
+    draftPlayers: [],
     state: null,
     startedAt: null,
   };
@@ -53,6 +54,7 @@ export function cancelSessionSetup(currentSession) {
     status: SESSION_STATUS.IDLE,
     sessionId: null,
     draftPlayerIds: [],
+    draftPlayers: [],
     state: null,
     startedAt: null,
   };
@@ -60,9 +62,19 @@ export function cancelSessionSetup(currentSession) {
 
 export function addDraftPlayerToSession(
   currentSession,
-  playerId,
+  playerOrId,
 ) {
   requireSetupSession(currentSession);
+
+  const draftPlayer =
+    typeof playerOrId === "object"
+      ? playerOrId
+      : null;
+
+  const playerId =
+    typeof playerOrId === "string"
+      ? playerOrId
+      : draftPlayer?.id;
 
   if (!playerId) {
     throw new Error(
@@ -70,16 +82,40 @@ export function addDraftPlayerToSession(
     );
   }
 
-  if (currentSession.draftPlayerIds.includes(playerId)) {
+  const existingDraftPlayers =
+    currentSession.draftPlayers ?? [];
+
+  const playerAlreadyExists =
+    currentSession.draftPlayerIds.includes(
+      playerId,
+    ) ||
+    existingDraftPlayers.some(
+      (player) => player.id === playerId,
+    );
+
+  if (playerAlreadyExists) {
     return currentSession;
   }
 
   return {
     ...currentSession,
+
     draftPlayerIds: [
       ...currentSession.draftPlayerIds,
       playerId,
     ],
+
+    /*
+     * String IDs remain supported temporarily so the
+     * current landing page does not break before the
+     * next migration step.
+     */
+    draftPlayers: draftPlayer
+      ? [
+          ...existingDraftPlayers,
+          draftPlayer,
+        ]
+      : existingDraftPlayers,
   };
 }
 
@@ -91,36 +127,94 @@ export function removeDraftPlayerFromSession(
 
   return {
     ...currentSession,
+
     draftPlayerIds:
       currentSession.draftPlayerIds.filter(
         (draftPlayerId) =>
           draftPlayerId !== playerId,
       ),
+
+    draftPlayers:
+      (currentSession.draftPlayers ?? [])
+        .filter(
+          (draftPlayer) =>
+            draftPlayer.id !== playerId,
+        ),
   };
 }
 
 export function startCurrentSession(
   currentSession,
-  directoryPlayers,
-  startedAt = Date.now(),
+  directoryPlayersOrStartedAt = [],
+  explicitStartedAt = Date.now(),
 ) {
   requireSetupSession(currentSession);
 
-  const existingDirectoryPlayerIds = new Set(
-    directoryPlayers.map((player) => player.id),
-  );
+  /*
+   * This compatibility layer keeps the current
+   * landing-page call working until the next step.
+   */
+  const directoryPlayers =
+    Array.isArray(directoryPlayersOrStartedAt)
+      ? directoryPlayersOrStartedAt
+      : [];
+
+  const startedAt =
+    typeof directoryPlayersOrStartedAt === "number"
+      ? directoryPlayersOrStartedAt
+      : explicitStartedAt;
+
+  let draftPlayers = [
+    ...(currentSession.draftPlayers ?? []),
+  ];
 
   /*
-   * Remove duplicate and stale directory IDs before
-   * creating the active queue.
+   * Support rosters created before draft_players was
+   * connected to React.
    */
-  const validDraftPlayerIds = [
-    ...new Set(currentSession.draftPlayerIds),
-  ].filter((playerId) =>
-    existingDirectoryPlayerIds.has(playerId),
-  );
+  if (
+    draftPlayers.length === 0 &&
+    directoryPlayers.length > 0
+  ) {
+    const directoryPlayerMap = new Map(
+      directoryPlayers.map((player) => [
+        player.id,
+        player,
+      ]),
+    );
 
-  if (validDraftPlayerIds.length < 4) {
+    draftPlayers =
+      currentSession.draftPlayerIds
+        .map((playerId) => {
+          const directoryPlayer =
+            directoryPlayerMap.get(playerId);
+
+          if (!directoryPlayer) {
+            return null;
+          }
+
+          return {
+            id: directoryPlayer.id,
+            name: directoryPlayer.name,
+            skillLevel:
+              directoryPlayer.skillLevel ||
+              "Unknown",
+            isDirectoryPlayer: true,
+          };
+        })
+        .filter(Boolean);
+  }
+
+  const uniqueDraftPlayers = [
+    ...new Map(
+      draftPlayers.map((player) => [
+        player.id,
+        player,
+      ]),
+    ).values(),
+  ];
+
+  if (uniqueDraftPlayers.length < 4) {
     throw new Error(
       "Add at least four valid players before starting the session.",
     );
@@ -131,18 +225,15 @@ export function startCurrentSession(
     status: SESSION_STATUS.ACTIVE,
 
     state: createFreshSessionQueueState(
-      directoryPlayers,
-      validDraftPlayerIds,
+      uniqueDraftPlayers,
       startedAt,
     ),
 
-    /*
-     * Once active, the roster is already represented
-     * inside state.players.
-     */
     draftPlayerIds: [],
+    draftPlayers: [],
 
-    startedAt: new Date(startedAt).toISOString(),
+    startedAt:
+      new Date(startedAt).toISOString(),
   };
 }
 
@@ -152,6 +243,7 @@ export function endCurrentSession(currentSession) {
     status: SESSION_STATUS.IDLE,
     sessionId: null,
     draftPlayerIds: [],
+    draftPlayers: [],
     state: null,
     startedAt: null,
   };

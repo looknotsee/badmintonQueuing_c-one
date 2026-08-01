@@ -45,6 +45,7 @@ import {
 
 import {
   createDirectoryPlayer,
+  createDirectoryPlayerWithId,
   fetchPlayerDirectory,
 } from "./services/playerDirectoryRepository.js";
 
@@ -347,10 +348,140 @@ function clearFlyingMatch() {
 }
 
 async function endMatchOnCourt(courtId) {
-  await commitSharedStateChange(
-    (currentState) =>
-      endMatchOnCourtState(currentState, courtId),
+  const stateBeforeEnding =
+    systemStateRef.current;
+
+  const selectedCourt =
+    stateBeforeEnding.courts.find(
+      (court) => court.id === courtId,
+    );
+
+  const activeMatch =
+    stateBeforeEnding.activeMatches.find(
+      (match) =>
+        match.id === selectedCourt?.currentMatchId,
+    );
+
+  if (!activeMatch) {
+    await commitSharedStateChange(
+      (currentState) =>
+        endMatchOnCourtState(
+          currentState,
+          courtId,
+        ),
+    );
+
+    return;
+  }
+
+  const matchPlayerIds =
+    getMatchPlayerIds(activeMatch);
+
+  /*
+   * First save the completed match. This increments
+   * gamesPlayed before directory promotion occurs.
+   */
+  const endedSession =
+    await commitSharedStateChange(
+      (currentState) =>
+        endMatchOnCourtState(
+          currentState,
+          courtId,
+        ),
+    );
+
+  if (!endedSession) {
+    return;
+  }
+
+  const temporaryPlayersToPromote =
+    endedSession.state.players.filter(
+      (player) =>
+        matchPlayerIds.includes(player.id) &&
+        player.gamesPlayed >= 1 &&
+        player.isDirectoryPlayer !== true,
+    );
+
+  if (
+    temporaryPlayersToPromote.length === 0
+  ) {
+    return;
+  }
+
+  const promotionResults =
+    await Promise.allSettled(
+      temporaryPlayersToPromote.map(
+        (player) =>
+          createDirectoryPlayerWithId({
+            id: player.id,
+            name: player.name,
+            skillLevel:
+              player.skillLevel || "Unknown",
+          }),
+      ),
+    );
+
+  const promotedPlayerIds = new Set();
+
+  const failedPlayerNames = [];
+
+  promotionResults.forEach(
+    (result, resultIndex) => {
+      const player =
+        temporaryPlayersToPromote[
+          resultIndex
+        ];
+
+      if (result.status === "fulfilled") {
+        promotedPlayerIds.add(player.id);
+        return;
+      }
+
+      console.error(
+        `Could not promote ${player.name} to the player directory.`,
+        result.reason,
+      );
+
+      failedPlayerNames.push(player.name);
+    },
   );
+
+  /*
+   * Mark successfully promoted players so future
+   * completed games do not attempt another insert.
+   */
+  if (promotedPlayerIds.size > 0) {
+    await commitSharedStateChange(
+      (currentState) => ({
+        ...currentState,
+
+        players: currentState.players.map(
+          (player) =>
+            promotedPlayerIds.has(player.id)
+              ? {
+                  ...player,
+                  isDirectoryPlayer: true,
+                }
+              : player,
+        ),
+
+        statusMessage:
+          failedPlayerNames.length > 0
+            ? `${currentState.statusMessage} Some player profiles could not be saved: ${failedPlayerNames.join(", ")}.`
+            : `${currentState.statusMessage} First-time players were added to the player directory.`,
+      }),
+    );
+
+    return;
+  }
+
+  if (failedPlayerNames.length > 0) {
+    setSystemState((currentState) => ({
+      ...currentState,
+      statusMessage:
+        `${currentState.statusMessage} Could not save these player profiles: ${failedPlayerNames.join(", ")}.`,
+    }));
+  }
 }
 
 async function cancelMatchOnCourt(courtId) {
