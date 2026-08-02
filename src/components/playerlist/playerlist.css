@@ -155,11 +155,6 @@
     color: #811010;
 }
 
-.playerlist-skill--Unknown {
-    background-color: var(--neutral-badge-tint, #eceeec);
-    color: var(--neutral-badge-700, #5c645d);
-}
-
 .playerlist-skill--Guest {
     background-color: var(--gold-tint, #fbeed7);
     color: var(--gold-700, #8a5a12);
