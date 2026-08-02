@@ -1,7 +1,7 @@
 const MAX_PREPARED_MATCHES = 4;
 
 const skillValues = {
-  Unknown: 2,
+  Guest: 2,
   Beginner: 1,
   Intermediate: 2,
   Expert: 3,

@@ -270,12 +270,6 @@
     /* red */
 }
 
-.skill-btn--Unknown.skill-btn--active {
-    border-color: transparent;
-    background: #6b7280;
-    /* gray */
-}
-
 .skill-btn--Guest.skill-btn--active {
     border-color: transparent;
     background: #9e6809;

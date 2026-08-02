@@ -12,7 +12,7 @@ export default function PlayerForm({
   isDisabled = false
 }) {
   const [name, setName] = useState("");
-  const [skill, setSkill] = useState("");
+  const [skill, setSkill] = useState("Guest");
   const [selectedPlayerId, setSelectedPlayerId] =
     useState(null);
   const [showSuggestions, setShowSuggestions] =
@@ -22,11 +22,10 @@ export default function PlayerForm({
   const [error, setError] = useState("");
 
   const skillLevels = [
-    "Unknown",
+    "Guest",
     "Beginner",
     "Intermediate",
     "Expert",
-    "Guest",
   ];
 
   const normalizedName =
@@ -46,7 +45,7 @@ export default function PlayerForm({
 
   function handleClear() {
     setName("");
-    setSkill("");
+    setSkill("Guest");
     setSelectedPlayerId(null);
     setShowSuggestions(false);
     setError("");
@@ -67,7 +66,7 @@ export default function PlayerForm({
      * changes the entry back into a new typed player.
      */
     if (selectedPlayerId) {
-      setSkill("");
+      setSkill("Guest");
     }
 
     setName(nextName);
@@ -81,7 +80,7 @@ export default function PlayerForm({
     setName(player.name);
     setSelectedPlayerId(player.id);
     setSkill(
-      player.skillLevel || "Unknown",
+      player.skillLevel || "Guest",
     );
     setShowSuggestions(false);
     setError("");
@@ -198,7 +197,7 @@ function handleFormKeyDown(event) {
         await onAddPlayer?.({
           playerId: selectedPlayerId,
           name: trimmedName,
-          skillLevel: skill || "Unknown",
+          skillLevel: skill || "Guest",
         });
 
       if (!playerWasAdded) {

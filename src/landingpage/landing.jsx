@@ -294,7 +294,7 @@ async function handleAddPlayer({
         id: directoryPlayer.id,
         name: directoryPlayer.name,
         skillLevel:
-          directoryPlayer.skillLevel || "Unknown",
+          directoryPlayer.skillLevel || "Guest",
         isDirectoryPlayer: true,
       };
     } else {
@@ -324,7 +324,7 @@ async function handleAddPlayer({
       draftPlayer = {
         id: crypto.randomUUID(),
         name: trimmedName,
-        skillLevel: skillLevel || "Unknown",
+        skillLevel: skillLevel || "Guest",
         isDirectoryPlayer: false,
       };
     }

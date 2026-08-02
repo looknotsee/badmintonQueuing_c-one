@@ -30,7 +30,7 @@ export function addDirectoryPlayerToActiveSessionState(
     id: directoryPlayer.id,
     name: directoryPlayer.name,
     skillLevel:
-      directoryPlayer.skillLevel || "Unknown",
+      directoryPlayer.skillLevel || "Guest",
 
     gamesPlayed: 0,
     totalTimePlayed: 0,

@@ -60,7 +60,7 @@ export async function createDirectoryPlayer({
     .from("player_directory")
     .insert({
       name: trimmedName,
-      skill_level: skillLevel || "Unknown",
+      skill_level: skillLevel || "Guest",
     })
     .select(PLAYER_DIRECTORY_COLUMNS)
     .single();
@@ -100,7 +100,7 @@ export async function createDirectoryPlayerWithId({
     .insert({
       id,
       name: trimmedName,
-      skill_level: skillLevel || "Unknown",
+      skill_level: skillLevel || "Guest",
     })
     .select(PLAYER_DIRECTORY_COLUMNS)
     .single();
@@ -165,7 +165,7 @@ export async function updateDirectoryPlayer(
     .from("player_directory")
     .update({
       name: trimmedName,
-      skill_level: skillLevel || "Unknown",
+      skill_level: skillLevel || "Guest",
       updated_at: new Date().toISOString(),
     })
     .eq("id", playerId)

@@ -198,7 +198,7 @@ export function startCurrentSession(
             name: directoryPlayer.name,
             skillLevel:
               directoryPlayer.skillLevel ||
-              "Unknown",
+              "Guest",
             isDirectoryPlayer: true,
           };
         })

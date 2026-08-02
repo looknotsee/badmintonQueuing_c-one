@@ -51,7 +51,7 @@ export function createFreshSessionQueueState(
         id: draftPlayer.id,
         name: draftPlayer.name.trim(),
         skillLevel:
-          draftPlayer.skillLevel || "Unknown",
+          draftPlayer.skillLevel || "Guest",
 
         /*
          * False means the profile is temporary and

@@ -416,7 +416,7 @@ async function endMatchOnCourt(courtId) {
             id: player.id,
             name: player.name,
             skillLevel:
-              player.skillLevel || "Unknown",
+              player.skillLevel || "Guest",
           }),
       ),
     );
@@ -627,7 +627,7 @@ async function registerPlayer(event) {
             name: trimmedName,
             skillLevel:
               registrationForm.skillLevel ||
-              "Unknown",
+              "Guest",
           });
       } catch (createError) {
         /*
