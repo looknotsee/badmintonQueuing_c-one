@@ -133,23 +133,23 @@
 }
 
 .skill-badge.beginner {
-    background: var(--sky-tint);
-    color: var(--sky-700);
+  background: rgba(28, 143, 90, 0.16);
+  color: #157a4c;
 }
 
 .skill-badge.intermediate {
-    background: var(--gold-tint);
-    color: var(--gold-700);
+  background: rgba(11, 65, 153, 0.14);
+  color: #0b4199;
 }
 
 .skill-badge.expert {
-    background: var(--violet-tint);
-    color: var(--violet-700);
+  background: rgba(129, 16, 16, 0.14);
+  color: #811010;
 }
 
-.skill-badge.unknown {
-    background: var(--neutral-badge-tint);
-    color: var(--neutral-badge-700);
+.skill-badge.guest {
+  background: rgba(158, 104, 9, 0.16);
+  color: #9e6809;
 }
 
 .player-pool-location {

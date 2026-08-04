@@ -68,7 +68,7 @@ function CourtCard({
           </>
         ) : (
           <div className="empty-court">
-            <strong>Available</strong>
+            <strong>OPEN COURT</strong>
             <span>
               {draggedMatchId
                 ? "Drop here to start this match."

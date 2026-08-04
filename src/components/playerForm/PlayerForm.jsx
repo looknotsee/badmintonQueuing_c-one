@@ -307,9 +307,9 @@ function handleFormKeyDown(event) {
                   isDisabled ||
                   Boolean(selectedPlayerId)
                 }
-                aria-pressed={skill === level}
+                aria-pressed={!isDisabled && skill === level}
                 className={`skill-btn skill-btn--${level} ${
-                  skill === level
+                  !isDisabled && skill === level
                     ? "skill-btn--active"
                     : ""
                 }`}
