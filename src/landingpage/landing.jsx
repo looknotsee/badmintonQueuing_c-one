@@ -476,7 +476,16 @@ async function confirmPlayerRemoval(playerId) {
         </>
       ) : currentSession?.status === SESSION_STATUS.SETUP ? (
         <>
-          <strong>Session setup in progress.</strong>
+          <strong>Session setup in progress
+            <span
+              className = "animated-dots"
+              aria-hidden = "true"
+            >
+              <span>.</span>
+              <span>.</span>
+              <span>.</span>
+            </span>
+          </strong>
             <span>
               {draftRosterPlayers.length} player
               {draftRosterPlayers.length === 1 ? "" : "s"} added to the pool.
