@@ -309,6 +309,7 @@ async function commitSharedStateChange(
 async function startMatchOnCourt(
   courtId,
   requestedMatchId = null,
+  customStartRect = null
 ) {
   const matchIdToStart = requestedMatchId ?? matchQueue[0]?.id;
   const matchToStart = matchQueue.find(
@@ -325,7 +326,7 @@ async function startMatchOnCourt(
     `[data-court-id="${courtId}"]`,
   );
 
-  if (matchToStart && queueCardElement && courtCardElement) {
+  if (matchToStart && courtCardElement && (customStartRect || queueCardElement)) {
     setFlyingMatch({
       matchId: matchToStart.id,
       teamOne: matchToStart.teamOne,
@@ -337,6 +338,7 @@ async function startMatchOnCourt(
         )?.name ?? "Court",
 
       startRect:
+        customStartRect ??
         queueCardElement.getBoundingClientRect(),
 
       endRect:
@@ -657,18 +659,59 @@ function handleGlobalDragOver(event) {
   }
 
   function handleCourtDrop(event, court) {
-    event.preventDefault();
+  event.preventDefault();
 
-    const droppedMatchId =
-      draggedMatchId || event.dataTransfer.getData("text/plain");
+  const droppedMatchId =
+    draggedMatchId ||
+    event.dataTransfer.getData(
+      "text/plain",
+    );
 
-    if (droppedMatchId && court.status === "available") {
-      startMatchOnCourt(court.id, droppedMatchId);
-    }
-
+  if (
+    !droppedMatchId ||
+    court.status !== "available"
+  ) {
     setDraggedMatchId(null);
     setDragOverCourtId(null);
+    setDragPreview(null);
+    return;
   }
+
+  /*
+   * Capture the exact visual position of the card
+   * currently underneath the user's cursor.
+   */
+  const dragStartRect = dragPreview
+    ? {
+        left: Math.round(
+          dragPreview.x -
+            dragPreview.grabOffsetX,
+        ),
+
+        top: Math.round(
+          dragPreview.y -
+            dragPreview.grabOffsetY,
+        ),
+
+        width: dragPreview.width,
+        height: dragPreview.height,
+      }
+    : null;
+
+  /*
+   * The flying animation begins from exactly where
+   * the user released the dragged card.
+   */
+  startMatchOnCourt(
+    court.id,
+    droppedMatchId,
+    dragStartRect,
+  );
+
+  setDraggedMatchId(null);
+  setDragOverCourtId(null);
+  setDragPreview(null);
+}
 
 async function registerPlayer(event) {
   event.preventDefault();
@@ -1283,7 +1326,7 @@ async function handleEndSession() {
             Next Match
            </strong>
           </header>
-          
+
         <TeamBox
           playerIds={dragPreview.teamOne}
           players={players}
