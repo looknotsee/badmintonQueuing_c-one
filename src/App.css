@@ -743,6 +743,43 @@ button:disabled {
   margin-top: 1.25rem;
 }
 
+.queue-drag-preview {
+  position: fixed;
+  z-index: 1300;
+
+  box-sizing: border-box;
+  padding: 0.65rem;
+
+  border: 1px solid var(--green-500);
+  border-radius: var(--radius-md);
+
+  background: var(--surface);
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, 0.22),
+    0 0 0 2px
+      color-mix(
+        in srgb,
+        var(--green-500) 12%,
+        transparent
+      );
+
+  pointer-events: none;
+
+  opacity: 1;
+
+  /*
+   * Do not scale or rotate the card.
+   * Those transforms were causing the text blur.
+   */
+  transform: none;
+
+  will-change: left, top;
+}
+
+.queue-drag-preview .vs-divider {
+  margin: 0.3rem 0;
+}
+
 @media (max-width: 900px) {
   .top-actions {
     flex-wrap: wrap;

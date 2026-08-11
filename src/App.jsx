@@ -10,6 +10,7 @@ import PlayerPoolModal from "./components/playerpool/PlayerPoolModal";
 import FlyingMatchCard from "./components/flyingmatchcard/Flyingmatchcard";
 import { sampleCourts, samplePlayers } from "./data/sampleData";
 import PlayerPoolCard from "./components/playerpool/PlayerPoolCard";
+import TeamBox from "./components/teambox/Teambox";
 
 import {
 createId,
@@ -84,6 +85,7 @@ function App() {
   const [draggedMatchId, setDraggedMatchId] = useState(null);
   const [dragOverQueueIndex, setDragOverQueueIndex] = useState(null);
   const [dragOverCourtId, setDragOverCourtId] = useState(null);
+  const [dragPreview, setDragPreview] = useState(null);
 
   // Simple page navigation without adding another dependency.
   const [activePage, setActivePage] = useState("queue");
@@ -525,16 +527,89 @@ async function reorderQueuedMatchToIndex(
   );
 }
 
-  function handleQueueDragStart(event, matchId) {
-    setDraggedMatchId(matchId);
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", matchId);
+function handleQueueDragStart(event, matchId) {
+  const match = systemStateRef.current.matchQueue.find(
+    (currentMatch) => currentMatch.id === matchId,
+  );
+
+  const cardElement = event.currentTarget;
+
+  if (!match || !cardElement) {
+    return;
   }
+
+  const cardRect =
+    cardElement.getBoundingClientRect();
+
+  setDraggedMatchId(matchId);
+
+  setDragPreview({
+    matchId,
+    teamOne: match.teamOne,
+    teamTwo: match.teamTwo,
+
+    width: cardRect.width,
+    height: cardRect.height,
+
+    /*
+     * Preserve where inside the card the user
+     * originally grabbed it.
+     */
+    grabOffsetX:
+      event.clientX - cardRect.left,
+
+    grabOffsetY:
+      event.clientY - cardRect.top,
+
+    x: event.clientX,
+    y: event.clientY,
+  });
+
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData(
+    "text/plain",
+    matchId,
+  );
+
+  /*
+   * Hide the browser's native drag ghost.
+   */
+  const transparentDragImage =
+    new Image();
+
+  transparentDragImage.src =
+    "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=";
+
+  event.dataTransfer.setDragImage(
+    transparentDragImage,
+    0,
+    0,
+  );
+}
+
+function handleGlobalDragOver(event) {
+  if (!dragPreview) {
+    return;
+  }
+
+  setDragPreview((currentPreview) => {
+    if (!currentPreview) {
+      return null;
+    }
+
+    return {
+      ...currentPreview,
+      x: event.clientX,
+      y: event.clientY,
+    };
+  });
+}
 
   function handleQueueDragEnd() {
     setDraggedMatchId(null);
     setDragOverQueueIndex(null);
     setDragOverCourtId(null);
+    setDragPreview(null);
   }
 
   function handleQueueCardDragOver(event, index) {
@@ -1079,7 +1154,10 @@ async function handleEndSession() {
 }
 
   return (
-    <main className="app-shell">
+    <main 
+      className="app-shell"
+      onDragOver={handleGlobalDragOver}
+    >
       <header className="top-bar">
         <Navbar />
 
@@ -1173,6 +1251,54 @@ async function handleEndSession() {
         confirmPlayerRemoval={confirmPlayerRemoval}
         findPlayerLocation={findPlayerLocation}
       />
+
+      {dragPreview && (
+        <div
+          className="queue-drag-preview"
+          style={{
+            left: Math.round(
+              dragPreview.x -
+              dragPreview.grabOffsetX,
+            ),
+
+            top: Math.round(
+              dragPreview.y -
+              dragPreview.grabOffsetY,
+            ),
+
+            width: dragPreview.width,
+          }}
+          aria-hidden="true"
+        
+        >
+
+        <header className="queue-card-header">
+          <strong>
+            <span
+              className="drag-handle"
+              aria-hidden="true"
+            >
+              ⠿
+            </span>{" "}
+            Next Match
+           </strong>
+          </header>
+          
+        <TeamBox
+          playerIds={dragPreview.teamOne}
+          players={players}
+        />
+
+        <div className="vs-divider">
+          <span>vs</span>
+        </div>
+
+        <TeamBox
+          playerIds={dragPreview.teamTwo}
+          players={players}
+        />
+     </div>
+    )}
 
       {flyingMatch && (
         <FlyingMatchCard
