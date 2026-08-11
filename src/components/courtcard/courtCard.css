@@ -1,6 +1,8 @@
 .court-card {
     display: flex;
     min-width: 0;
+    height: 350px;
+    box-sizing: border-box;
     flex-direction: column;
     background: var(--surface);
     border: 1px solid var(--border);
@@ -21,7 +23,9 @@
 }
 
 .court-content {
+    display: flex;
     flex: 1;
+    flex-direction: column;
 }
 
 .court-action-row {
@@ -78,9 +82,13 @@
 
 .empty-court {
     display: grid;
-    min-height: 150px;
+    width: 100%;
+    min-height: 0;
+    flex: 1;
+    box-sizing: border-box;
     place-items: center;
-    align-content: center;
+    place-content: center;
+    gap: 0.2rem;
     padding: 1rem;
     border: 1px dashed var(--border-strong);
     border-radius: var(--radius-md);
@@ -90,6 +98,7 @@
 }
 
 .court-footer {
+    flex-shrink: 0;
     margin-top: 0.75rem;
 }
 

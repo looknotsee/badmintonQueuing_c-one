@@ -328,8 +328,17 @@ async function startMatchOnCourt(
       matchId: matchToStart.id,
       teamOne: matchToStart.teamOne,
       teamTwo: matchToStart.teamTwo,
-      startRect: queueCardElement.getBoundingClientRect(),
-      endRect: courtCardElement.getBoundingClientRect(),
+
+      courtName:
+        courts.find(
+          (court) => court.id === courtId,
+        )?.name ?? "Court",
+
+      startRect:
+        queueCardElement.getBoundingClientRect(),
+
+      endRect:
+        courtCardElement.getBoundingClientRect(),
     });
   }
 

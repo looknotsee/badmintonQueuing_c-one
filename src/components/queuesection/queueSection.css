@@ -1,6 +1,6 @@
 .queue-section {
-    min-height: 42vh;
-    padding: 1.75rem 1.25rem;
+    min-height: 0;
+    padding: 0.75rem 1.25rem 1rem;
     background: var(--surface-sunk);
     color: var(--ink-900);
 }
@@ -35,7 +35,7 @@
     font-size: var(--text-xs);
     letter-spacing: 0.02em;
 }
-
+    
 .queue-summary span {
     white-space: nowrap;
 }
