@@ -1,39 +1,49 @@
 import {createId, fillPreparedMatchQueue, getMatchPlayerIds} from "./matchmaking.js";
 
-export function addDirectoryPlayerToActiveSessionState(
+export function addPlayerToActiveSessionState(
   currentState,
-  directoryPlayer,
+  playerToAdd,
   joinedAt = Date.now(),
 ) {
-  if (!directoryPlayer?.id) {
+  if (!playerToAdd?.id) {
     return {
       ...currentState,
       statusMessage:
-        "The selected directory player could not be found.",
+        "The selected player could not be found.",
     };
   }
 
   const playerAlreadyInSession =
     currentState.players.some(
-      (player) => player.id === directoryPlayer.id,
+      (player) =>
+        player.id === playerToAdd.id,
     );
 
   if (playerAlreadyInSession) {
     return {
       ...currentState,
       statusMessage:
-        `${directoryPlayer.name} is already in the current session.`,
+        `${playerToAdd.name} is already in the current session.`,
     };
   }
 
   const sessionPlayer = {
-    id: directoryPlayer.id,
-    name: directoryPlayer.name,
+    id: playerToAdd.id,
+    name: playerToAdd.name,
+
     skillLevel:
-      directoryPlayer.skillLevel || "Guest",
+      playerToAdd.skillLevel || "Guest",
+
+    /*
+     * Returning players = true.
+     * Newly typed players = false.
+     */
+    isDirectoryPlayer:
+      playerToAdd.isDirectoryPlayer === true,
 
     gamesPlayed: 0,
     totalTimePlayed: 0,
+
     status: "available",
     waitingSince: joinedAt,
   };

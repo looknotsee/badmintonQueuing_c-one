@@ -40,12 +40,11 @@ import {
 } from "./logic/courtActions.js"
 
 import {
-  addDirectoryPlayerToActiveSessionState,
+  addPlayerToActiveSessionState,
   removePlayerState
 } from "./logic/playerActions.js";
 
 import {
-  createDirectoryPlayer,
   createDirectoryPlayerWithId,
   fetchPlayerDirectory,
 } from "./services/playerDirectoryRepository.js";
@@ -99,7 +98,7 @@ function App() {
   // Player registration and player-pool controls.
   const [registrationForm, setRegistrationForm] = useState({
     name: "",
-    skillLevel: "Beginner",
+    skillLevel: "Guest",
   });
   const [playerSearch, setPlayerSearch] = useState("");
   const [playerStatusFilter, setPlayerStatusFilter] = useState("all");
@@ -820,74 +819,90 @@ async function registerPlayer(event) {
     trimmedName.toLowerCase();
 
   try {
-    let directoryPlayers =
+    /*
+     * First check whether this person already has
+     * a permanent player-directory profile.
+     */
+    const directoryPlayers =
       await fetchPlayerDirectory();
 
-    let directoryPlayer =
+    const existingDirectoryPlayer =
       directoryPlayers.find(
         (player) =>
-          player.name.trim().toLowerCase() ===
+          player.name
+            .trim()
+            .toLowerCase() ===
           normalizedName,
       );
 
     /*
-     * Create a persistent profile only when the
-     * player does not already exist in the directory.
+     * Prevent the same person/name from being added
+     * twice to this active session.
      */
-    if (!directoryPlayer) {
-      try {
-        directoryPlayer =
-          await createDirectoryPlayer({
-            name: trimmedName,
-            skillLevel:
-              registrationForm.skillLevel ||
-              "Guest",
-          });
-      } catch (createError) {
-        /*
-         * Another device may have created the same
-         * player after our initial directory fetch.
-         */
-        directoryPlayers =
-          await fetchPlayerDirectory();
-
-        directoryPlayer =
-          directoryPlayers.find(
-            (player) =>
-              player.name
-                .trim()
-                .toLowerCase() ===
-              normalizedName,
-          );
-
-        if (!directoryPlayer) {
-          throw createError;
-        }
-      }
-    }
-
     const playerAlreadyInSession =
       systemStateRef.current.players.some(
         (player) =>
-          player.id === directoryPlayer.id,
+          player.id ===
+            existingDirectoryPlayer?.id ||
+          player.name
+            .trim()
+            .toLowerCase() ===
+            normalizedName,
       );
 
     if (playerAlreadyInSession) {
       setSystemState((currentState) => ({
         ...currentState,
+
         statusMessage:
-          `${directoryPlayer.name} is already in the current session.`,
+          `${trimmedName} is already in the current session.`,
       }));
 
       return;
     }
 
+    let playerToAdd;
+
+    if (existingDirectoryPlayer) {
+      /*
+       * Returning player:
+       * reuse their persistent UUID/profile.
+       */
+      playerToAdd = {
+        id: existingDirectoryPlayer.id,
+        name: existingDirectoryPlayer.name,
+
+        skillLevel:
+          existingDirectoryPlayer.skillLevel ||
+          "Guest",
+
+        isDirectoryPlayer: true,
+      };
+    } else {
+      /*
+       * New player:
+       * create ONLY a temporary in-session profile.
+       *
+       * Nothing is inserted into player_directory yet.
+       */
+      playerToAdd = {
+        id: crypto.randomUUID(),
+        name: trimmedName,
+
+        skillLevel:
+          registrationForm.skillLevel ||
+          "Guest",
+
+        isDirectoryPlayer: false,
+      };
+    }
+
     const updatedSession =
       await commitSharedStateChange(
         (currentState) =>
-          addDirectoryPlayerToActiveSessionState(
+          addPlayerToActiveSessionState(
             currentState,
-            directoryPlayer,
+            playerToAdd,
           ),
       );
 
@@ -897,7 +912,7 @@ async function registerPlayer(event) {
 
     setRegistrationForm({
       name: "",
-      skillLevel: "Beginner",
+      skillLevel: "Guest",
     });
   } catch (error) {
     console.error(
