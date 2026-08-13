@@ -76,6 +76,8 @@ function App() {
   const currentSessionVersionRef = useRef(null);
   const currentSessionRef = useRef(null);
   const systemStateRef = useRef(systemState);
+  const sharedStateMutationQueueRef =
+  useRef(Promise.resolve());
 
   // This causes active court timers to update every second.
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -242,68 +244,136 @@ useEffect(() => {
   };
 }, [navigate]);
 
-async function commitSharedStateChange(
+function commitSharedStateChange(
   stateTransition,
+  { beforeOptimisticUpdate } = {},
 ) {
-  const currentVersion =
-    currentSessionVersionRef.current;
+  /*
+   * Every state mutation waits for the previous
+   * Supabase mutation to finish.
+   *
+   * Unlike the old boolean guard, actions are
+   * NEVER silently discarded.
+   */
+  const queuedChange =
+    sharedStateMutationQueueRef.current.then(
+      async () => {
+        const currentVersion =
+          currentSessionVersionRef.current;
 
-  const currentSession =
-    currentSessionRef.current;
+        const currentSession =
+          currentSessionRef.current;
 
-  if (
-    currentVersion === null ||
-    !currentSession ||
-    currentSession.status !== SESSION_STATUS.ACTIVE
-  ) {
-    console.error(
-      "The active session has not finished loading.",
+        if (
+          currentVersion === null ||
+          !currentSession ||
+          currentSession.status !==
+            SESSION_STATUS.ACTIVE
+        ) {
+          console.error(
+            "The active session has not finished loading.",
+          );
+
+          return null;
+        }
+
+        const previousState =
+          systemStateRef.current;
+
+        let nextState;
+
+        try {
+          nextState =
+            stateTransition(previousState);
+        } catch (transitionError) {
+          console.error(
+            "Could not apply the state change.",
+            transitionError,
+          );
+
+          return null;
+        }
+
+        /*
+         * Anything visual that must happen exactly
+         * when this mutation begins can run here.
+         */
+        if (beforeOptimisticUpdate) {
+          beforeOptimisticUpdate();
+        }
+
+        /*
+         * Optimistic update:
+         * change the UI immediately.
+         */
+        systemStateRef.current = nextState;
+        setSystemState(nextState);
+
+        try {
+          const updatedSession =
+            await updateCurrentSession(
+              {
+                ...currentSession,
+                state: nextState,
+              },
+              currentVersion,
+            );
+
+          currentSessionVersionRef.current =
+            updatedSession.version;
+
+          currentSessionRef.current =
+            updatedSession;
+
+          systemStateRef.current =
+            updatedSession.state;
+
+          setSystemState(
+            updatedSession.state,
+          );
+
+          return updatedSession;
+        } catch (error) {
+          console.error(
+            "Could not save the active session change.",
+            error,
+          );
+
+          const rolledBackState = {
+            ...previousState,
+
+            statusMessage:
+              `The change could not be saved: ${error.message}`,
+          };
+
+          systemStateRef.current =
+            rolledBackState;
+
+          setSystemState(
+            rolledBackState,
+          );
+
+          return null;
+        }
+      },
     );
 
-    return null;
-  }
-
-  try {
-    const currentState =
-      systemStateRef.current;
-
-    const nextState =
-      stateTransition(currentState);
-
-    const updatedSession =
-      await updateCurrentSession(
-        {
-          ...currentSession,
-          state: nextState,
-        },
-        currentVersion,
+  /*
+   * The next mutation waits for this one.
+   * catch() keeps the queue usable even if an
+   * unexpected error escapes above.
+   */
+  sharedStateMutationQueueRef.current =
+    queuedChange.catch((error) => {
+      console.error(
+        "Unexpected queued state-change error.",
+        error,
       );
 
-    currentSessionVersionRef.current =
-      updatedSession.version;
+      return null;
+    });
 
-    currentSessionRef.current =
-      updatedSession;
-
-    systemStateRef.current =
-      updatedSession.state;
-
-    setSystemState(updatedSession.state);
-
-    return updatedSession;
-  } catch (error) {
-    console.error(
-      "Could not save the active session change.",
-      error,
-    );
-
-    setSystemState((currentState) => ({
-      ...currentState,
-      statusMessage: error.message,
-    }));
-
-    return null;
-  }
+  return queuedChange;
 }
 
 async function startMatchOnCourt(
@@ -326,34 +396,51 @@ async function startMatchOnCourt(
     `[data-court-id="${courtId}"]`,
   );
 
-  if (matchToStart && courtCardElement && (customStartRect || queueCardElement)) {
-    setFlyingMatch({
-      matchId: matchToStart.id,
-      teamOne: matchToStart.teamOne,
-      teamTwo: matchToStart.teamTwo,
+  const nextFlyingMatch =
+  matchToStart &&
+  courtCardElement &&
+  (customStartRect || queueCardElement)
+    ? {
+        matchId: matchToStart.id,
+        courtId: courtId,
 
-      courtName:
-        courts.find(
-          (court) => court.id === courtId,
-        )?.name ?? "Court",
+        teamOne: matchToStart.teamOne,
+        teamTwo: matchToStart.teamTwo,
 
-      startRect:
-        customStartRect ??
-        queueCardElement.getBoundingClientRect(),
+        courtName:
+          courts.find(
+            (court) =>
+              court.id === courtId,
+          )?.name ?? "Court",
 
-      endRect:
-        courtCardElement.getBoundingClientRect(),
-    });
-  }
+        startRect:
+          customStartRect ??
+          queueCardElement.getBoundingClientRect(),
 
-  await commitSharedStateChange(
-    (currentState) =>
-      startMatchOnCourtState(
-        currentState,
-        courtId,
-        requestedMatchId,
-      ),
-  );
+        endRect:
+          courtCardElement.getBoundingClientRect(),
+      }
+    : null;
+
+await commitSharedStateChange(
+  (currentState) =>
+    startMatchOnCourtState(
+      currentState,
+      courtId,
+      requestedMatchId,
+    ),
+
+  {
+    beforeOptimisticUpdate: () => {
+      if (nextFlyingMatch) {
+        setFlyingMatch(
+          nextFlyingMatch,
+        );
+      }
+    },
+  },
+);
+
 }
 
 function clearFlyingMatch() {
@@ -1240,6 +1327,7 @@ async function handleEndSession() {
             currentTime={currentTime}
             draggedMatchId={draggedMatchId}
             dragOverCourtId={dragOverCourtId}
+            flyingCourtId={flyingMatch?.courtId ?? null}
             matchQueueLength={matchQueue.length}
             onCourtDragOver={handleCourtDragOver}
             onCourtDragLeave={handleCourtDragLeave}

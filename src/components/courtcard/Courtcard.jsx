@@ -9,6 +9,7 @@ function CourtCard({
   currentTime,
   draggedMatchId,
   dragOverCourtId,
+  isReceivingFlyingMatch,
   matchQueueLength,
   onDragOver,
   onDragLeave,
@@ -20,6 +21,11 @@ function CourtCard({
   const activeMatch = activeMatches.find(
     (match) => match.id === court.currentMatchId,
   );
+
+  const visibleActiveMatch =
+  isReceivingFlyingMatch
+    ? null
+    : activeMatch;
 
   const elapsedSeconds = activeMatch
     ? Math.max(0, Math.floor((currentTime - activeMatch.startedAt) / 1000))
@@ -58,28 +64,36 @@ function CourtCard({
       <h2>{court.name}</h2>
 
       <div className="court-content">
-        {activeMatch ? (
+        {visibleActiveMatch ? (
           <>
-            <TeamBox playerIds={activeMatch.teamOne} players={players} />
+            <TeamBox playerIds={visibleActiveMatch.teamOne} players={players} />
             <div className="vs-divider">
               <span>vs</span>
             </div>
-            <TeamBox playerIds={activeMatch.teamTwo} players={players} />
+            <TeamBox playerIds={visibleActiveMatch.teamTwo} players={players} />
           </>
         ) : (
           <div className="empty-court">
-            <strong>OPEN COURT</strong>
-            <span>
-              {draggedMatchId
-                ? "Drop here to start this match."
-                : "The next prepared match can start here."}
-            </span>
+            {isReceivingFlyingMatch ? (
+              <>
+                <strong>STARTING MATCH</strong>
+              </>
+            ) : (
+              <>
+                <strong>OPEN COURT</strong>
+                <span>
+                 {draggedMatchId
+                  ? "Drop here to start this match."
+                  : "The next prepared match can start here."}
+                </span>
+              </>
+            )}
           </div>
         )}
       </div>
 
       <div className="court-footer">
-        {activeMatch ? (
+        {visibleActiveMatch ? (
           <div className="court-action-row">
             <div className="court-timer">{formatSeconds(elapsedSeconds)}</div>
 
@@ -100,6 +114,7 @@ function CourtCard({
             </button>
           </div>
         ) : (
+        isReceivingFlyingMatch ? null : (
           <button
             type="button"
             className="court-start-button"
@@ -108,6 +123,7 @@ function CourtCard({
           >
             Start Next Match
           </button>
+        )
         )}
       </div>
     </article>

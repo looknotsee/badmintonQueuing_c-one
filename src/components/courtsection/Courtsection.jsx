@@ -8,6 +8,7 @@ function CourtSection({
   currentTime,
   draggedMatchId,
   dragOverCourtId,
+  flyingCourtId,
   matchQueueLength,
   onCourtDragOver,
   onCourtDragLeave,
@@ -32,6 +33,9 @@ function CourtSection({
             currentTime={currentTime}
             draggedMatchId={draggedMatchId}
             dragOverCourtId={dragOverCourtId}
+            isReceivingFlyingMatch={
+              flyingCourtId === court.id
+            }
             matchQueueLength={matchQueueLength}
             onDragOver={onCourtDragOver}
             onDragLeave={onCourtDragLeave}
